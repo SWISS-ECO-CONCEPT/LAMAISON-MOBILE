@@ -13,8 +13,9 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  // Tant qu'il n'y a pas de vérification de session, l'app démarre sur
+  // l'écran de connexion plutôt que sur les onglets placeholder du template.
+  initialRouteName: '(auth)',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
