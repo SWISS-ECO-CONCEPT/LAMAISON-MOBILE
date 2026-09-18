@@ -1,31 +1,223 @@
-import { StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { colors, radius } from '../../src/config/theme';
+import { LISTINGS } from '../../src/data/listings';
+import ListingCard from '../../components/ListingCard';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+const TRANSACTION_FILTERS = [
+  { key: 'location', label: 'Location' },
+  { key: 'achat', label: 'Achat' },
+];
 
-export default function TabOneScreen() {
+const CATEGORY_FILTERS = [
+  { key: 'maison', label: 'Maison', icon: 'home' as const },
+  { key: 'appartement', label: 'Appart', icon: 'apartment' as const },
+];
+
+export default function HomeScreen() {
+  const [activeTransaction, setActiveTransaction] = useState('location');
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.greeting}>Bonjour Arlette 👋</Text>
+            <Pressable style={styles.locationRow}>
+              <MaterialIcons name="location-on" size={18} color={colors.primary} />
+              <Text style={styles.locationText}>Douala</Text>
+              <MaterialIcons name="expand-more" size={19} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <Pressable style={styles.notifButton}>
+            <MaterialIcons name="notifications" size={22} color={colors.text} />
+            <View style={styles.notifDot} />
+          </Pressable>
+        </View>
+
+        <View style={styles.searchRow}>
+          <Pressable style={styles.searchInput}>
+            <MaterialIcons name="search" size={20} color={colors.textLight} />
+            <Text style={styles.searchPlaceholder}>Quartier, ville, type de bien…</Text>
+          </Pressable>
+          <Pressable style={styles.filterButton}>
+            <MaterialIcons name="tune" size={22} color={colors.white} />
+          </Pressable>
+        </View>
+
+        <View style={styles.chipRow}>
+          {TRANSACTION_FILTERS.map((filter) => {
+            const active = activeTransaction === filter.key;
+            return (
+              <Pressable
+                key={filter.key}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => setActiveTransaction(filter.key)}>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{filter.label}</Text>
+              </Pressable>
+            );
+          })}
+          <View style={styles.chipDivider} />
+          {CATEGORY_FILTERS.map((category) => (
+            <Pressable key={category.key} style={styles.chip}>
+              <MaterialIcons name={category.icon} size={16} color={colors.text} />
+              <Text style={styles.chipText}>{category.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+        <View style={styles.listHeader}>
+          <Text style={styles.listCount}>142 annonces autour de vous</Text>
+          <Text style={styles.listMapLink}>Carte</Text>
+        </View>
+
+        {LISTINGS.map((listing) => (
+          <ListingCard key={listing.id} listing={listing} />
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.appBackground,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
+    backgroundColor: colors.white,
+    shadowColor: colors.text,
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  greeting: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  locationRow: {
+    marginTop: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  locationText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  notifButton: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  notifDot: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 99,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.background,
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+  searchRow: {
+    marginTop: 16,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  searchPlaceholder: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  filterButton: {
+    width: 48,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.background,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  chipActive: {
+    backgroundColor: colors.primary,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  chipTextActive: {
+    color: colors.white,
+  },
+  chipDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginVertical: 4,
+    backgroundColor: colors.border,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  listCount: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  listMapLink: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

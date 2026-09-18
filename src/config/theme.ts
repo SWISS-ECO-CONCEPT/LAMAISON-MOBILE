@@ -8,7 +8,13 @@ export const colors = {
   appBackground: '#EDF0EE',// fond général de l'app
   text: '#111827',
   textMuted: '#6b7280',
+  textLight: '#9ca3af',
   border: '#E8EBE9',
+  warningBackground: '#FEF3C7',
+  warningText: '#b45309',
+  warningTextStrong: '#92400e',
+  danger: '#dc2626',
+  primaryDarker: '#14532d',
   white: '#FFFFFF',
 };
 
