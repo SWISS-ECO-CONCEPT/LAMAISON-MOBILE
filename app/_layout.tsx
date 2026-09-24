@@ -52,6 +52,10 @@ function RootLayoutNav() {
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="annonce/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="(agent)" options={{ headerShown: false }} />
+        <Stack.Screen name="publier-annonce" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="conversation/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="favoris" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );
