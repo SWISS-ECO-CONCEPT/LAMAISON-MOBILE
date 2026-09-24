@@ -3,29 +3,33 @@ import { Tabs } from 'expo-router';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { AGENT_PROFILE } from '../../src/data/agent';
 
-export default function TabLayout() {
+export default function AgentTabLayout() {
   const colorScheme = useColorScheme();
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme].tint,
-        // Chaque écran dessine son propre en-tête (voir index.tsx) — la barre
-        // de titre système ne fait pas partie de la maquette.
         headerShown: false,
       }}>
       <Tabs.Screen
-        name="index"
+        name="accueil"
         options={{
           title: 'Accueil',
           tabBarIcon: ({ color }) => (
+            <SymbolView name={{ ios: 'house.fill', android: 'home', web: 'home' }} tintColor={color} size={28} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="annonces"
+        options={{
+          title: 'Annonces',
+          tabBarIcon: ({ color }) => (
             <SymbolView
-              name={{
-                ios: 'house.fill',
-                android: 'home',
-                web: 'home',
-              }}
+              name={{ ios: 'building.2', android: 'apartment', web: 'apartment' }}
               tintColor={color}
               size={28}
             />
@@ -33,36 +37,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="recherche"
+        name="demandes"
         options={{
-          title: 'Recherche',
+          title: 'Demandes',
+          tabBarBadge: AGENT_PROFILE.stats.pendingRequests || undefined,
           tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'magnifyingglass',
-                android: 'search',
-                web: 'search',
-              }}
-              tintColor={color}
-              size={28}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="rendezvous"
-        options={{
-          title: 'RDV',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'calendar',
-                android: 'event',
-                web: 'event',
-              }}
-              tintColor={color}
-              size={28}
-            />
+            <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={color} size={28} />
           ),
         }}
       />
@@ -72,11 +52,7 @@ export default function TabLayout() {
           title: 'Messages',
           tabBarIcon: ({ color }) => (
             <SymbolView
-              name={{
-                ios: 'message.fill',
-                android: 'chat_bubble',
-                web: 'chat_bubble',
-              }}
+              name={{ ios: 'message.fill', android: 'chat_bubble', web: 'chat_bubble' }}
               tintColor={color}
               size={28}
             />
@@ -91,6 +67,7 @@ export default function TabLayout() {
             <SymbolView name={{ ios: 'person.fill', android: 'person', web: 'person' }} tintColor={color} size={28} />
           ),
         }}
-      /></Tabs>
+      />
+    </Tabs>
   );
 }

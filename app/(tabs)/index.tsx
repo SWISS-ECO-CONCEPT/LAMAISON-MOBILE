@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { LISTINGS } from '../../src/data/listings';
-import ListingCard from '../../components/ListingCard';
+import ListingCard from '../../src/components/ListingCard';
+import SearchBar from '../../src/components/SearchBar';
 
 const TRANSACTION_FILTERS = [
   { key: 'location', label: 'Location' },
@@ -16,7 +18,19 @@ const CATEGORY_FILTERS = [
 ];
 
 export default function HomeScreen() {
+  const { q } = useLocalSearchParams<{ q?: string }>();
   const [activeTransaction, setActiveTransaction] = useState('location');
+  const [searchQuery, setSearchQuery] = useState(q ?? '');
+
+  const query = searchQuery.trim().toLowerCase();
+  const filteredListings = LISTINGS.filter((listing) => {
+    if (!query) return true;
+    return (
+      listing.title.toLowerCase().includes(query) ||
+      listing.location.toLowerCase().includes(query) ||
+      listing.reference.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,14 +50,13 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.searchRow}>
-          <Pressable style={styles.searchInput}>
-            <MaterialIcons name="search" size={20} color={colors.textLight} />
-            <Text style={styles.searchPlaceholder}>Quartier, ville, type de bien…</Text>
-          </Pressable>
-          <Pressable style={styles.filterButton}>
-            <MaterialIcons name="tune" size={22} color={colors.white} />
-          </Pressable>
+        <View style={styles.searchWrap}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Quartier, ville, type de bien…"
+            onFilterPress={() => console.log('Ouvrir les filtres avancés')}
+          />
         </View>
 
         <View style={styles.chipRow}>
@@ -70,13 +83,17 @@ export default function HomeScreen() {
 
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
         <View style={styles.listHeader}>
-          <Text style={styles.listCount}>142 annonces autour de vous</Text>
+          <Text style={styles.listCount}>
+            {filteredListings.length} annonce{filteredListings.length > 1 ? 's' : ''} autour de vous
+          </Text>
           <Text style={styles.listMapLink}>Carte</Text>
         </View>
 
-        {LISTINGS.map((listing) => (
-          <ListingCard key={listing.id} listing={listing} />
-        ))}
+        {filteredListings.length === 0 ? (
+          <Text style={styles.emptyText}>Aucune annonce ne correspond à votre recherche.</Text>
+        ) : (
+          filteredListings.map((listing) => <ListingCard key={listing.id} listing={listing} />)
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -138,32 +155,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.background,
   },
-  searchRow: {
+  searchWrap: {
     marginTop: 16,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  searchInput: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    backgroundColor: colors.background,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  searchPlaceholder: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  filterButton: {
-    width: 48,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   chipRow: {
     marginTop: 14,
@@ -219,5 +212,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.primary,
+  },
+  emptyText: {
+    marginTop: 40,
+    textAlign: 'center',
+    fontSize: 14,
+    color: colors.textMuted,
   },
 });

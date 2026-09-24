@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors, radius } from '../src/config/theme';
-import type { Listing } from '../src/data/listings';
+import { colors, radius } from '../config/theme';
+import type { Listing } from '../data/listings';
 
 const CARD_IMAGE_HEIGHT = 160;
 const LIST_HORIZONTAL_PADDING = 20;
@@ -46,7 +46,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
           scrollEventThrottle={16}
           onScroll={handleScroll}
           scrollEnabled={listing.images.length > 1}>
-          {listing.images.map((image, index) => (
+          {listing.images.map((image: any, index: number) => (
             <Image
               key={index}
               source={image}
@@ -58,7 +58,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
 
         {listing.images.length > 1 && (
           <View style={styles.imageDotsRow}>
-            {listing.images.map((_, index) => (
+            {listing.images.map((_: any, index: number) => (
               <View
                 key={index}
                 style={[styles.imageDot, index === activeImage && styles.imageDotActive]}
