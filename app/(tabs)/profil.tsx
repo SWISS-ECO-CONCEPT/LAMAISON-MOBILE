@@ -1,13 +1,36 @@
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { CURRENT_USER } from '../../src/data/user';
 
 export default function ProfilScreen() {
     const router = useRouter();
+    const { signOut } = useAuth();
     const [alertsEnabled, setAlertsEnabled] = useState(true);
+    const [signingOut, setSigningOut] = useState(false);
+
+    const handleLogout = async () => {
+        setSigningOut(true);
+        try {
+            // signOut() invalide la session cote Clerk ET vide le tokenCache
+            // (expo-secure-store) -- sans ca, le jeton reste dans le Keychain/
+            // Keystore de l'appareil et l'app rouvre toujours sur l'accueil,
+            // meme apres un `expo start -c` (qui ne touche que le cache Metro,
+            // jamais le stockage securise de l'OS).
+            await signOut();
+            // Filet de securite : useAuth() dans RootLayoutNav et dans
+            // (tabs)/index.tsx redirige deja vers /login des que isSignedIn
+            // passe a false, mais un replace() explicite evite d'attendre
+            // le prochain re-render pour un retour visuel immediat.
+            router.replace('/login');
+        } catch (err) {
+            console.error('Erreur lors de la deconnexion', err);
+            setSigningOut(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -97,8 +120,15 @@ export default function ProfilScreen() {
                         </View>
                     </View>
 
-                    <Pressable style={styles.logoutButton}>
-                        <Text style={styles.logoutButtonText}>Se déconnecter</Text>
+                    <Pressable
+                        style={[styles.logoutButton, signingOut && styles.logoutButtonDisabled]}
+                        onPress={handleLogout}
+                        disabled={signingOut}>
+                        {signingOut ? (
+                            <ActivityIndicator color="#b91c1c" />
+                        ) : (
+                            <Text style={styles.logoutButtonText}>Se déconnecter</Text>
+                        )}
                     </Pressable>
                 </View>
             </ScrollView>
@@ -162,5 +192,6 @@ const styles = StyleSheet.create({
     toggleKnob: { width: 21, height: 21, borderRadius: 99, backgroundColor: colors.white },
     toggleKnobActive: { alignSelf: 'flex-end' },
     logoutButton: { backgroundColor: '#FEE2E2', borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+    logoutButtonDisabled: { opacity: 0.6 },
     logoutButtonText: { fontSize: 15, fontWeight: '800', color: '#b91c1c' },
 });

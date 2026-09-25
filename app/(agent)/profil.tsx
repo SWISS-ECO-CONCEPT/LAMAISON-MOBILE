@@ -1,11 +1,29 @@
-import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../src/config/theme';
 import { AGENT_PROFILE } from '../../src/data/agent';
 
 export default function AgentProfilScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Voir (tabs)/profil.tsx pour le detail : signOut() vide le tokenCache
+  // (expo-secure-store), sinon le jeton reste dans le Keychain/Keystore
+  // de l'appareil meme apres un `expo start -c`.
+  const handleLogout = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+      router.replace('/login');
+    } catch (err) {
+      console.error('Erreur lors de la deconnexion', err);
+      setSigningOut(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -38,8 +56,15 @@ export default function AgentProfilScreen() {
             </View>
           </View>
 
-          <Pressable style={styles.logoutButton}>
-            <Text style={styles.logoutButtonText}>Se déconnecter</Text>
+          <Pressable
+            style={[styles.logoutButton, signingOut && styles.logoutButtonDisabled]}
+            onPress={handleLogout}
+            disabled={signingOut}>
+            {signingOut ? (
+              <ActivityIndicator color="#b91c1c" />
+            ) : (
+              <Text style={styles.logoutButtonText}>Se déconnecter</Text>
+            )}
           </Pressable>
         </View>
       </ScrollView>
@@ -76,5 +101,6 @@ const styles = StyleSheet.create({
   roleOptionTextActive: { fontSize: 14, fontWeight: '800', color: colors.white },
   roleOptionText: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
   logoutButton: { backgroundColor: '#FEE2E2', borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+  logoutButtonDisabled: { opacity: 0.6 },
   logoutButtonText: { fontSize: 15, fontWeight: '800', color: '#b91c1c' },
 });
