@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { LISTINGS } from '../../src/data/listings';
@@ -18,9 +19,23 @@ const CATEGORY_FILTERS = [
 ];
 
 export default function HomeScreen() {
+  // `(tabs)/index.tsx` est le SEUL fichier de app/ nomme "index" -> c'est lui
+  // que Expo Router ouvre pour "/", quoi que dise unstable_settings dans
+  // _layout.tsx (ce reglage n'est pas fiable, cf. github.com/expo/router/issues/723).
+  // La garde doit donc vivre ICI, en <Redirect> declaratif (execute pendant
+  // le rendu, avant tout affichage) plutot qu'en useEffect + router.replace
+  // dans RootLayoutNav (qui s'execute APRES le premier rendu commite -> flash
+  // visible de cet ecran, avec les fausses donnees, avant la redirection).
+  const { isLoaded, isSignedIn } = useAuth();
   const { q } = useLocalSearchParams<{ q?: string }>();
   const [activeTransaction, setActiveTransaction] = useState('location');
   const [searchQuery, setSearchQuery] = useState(q ?? '');
+
+  // Les hooks ci-dessus tournent toujours dans le meme ordre (regle des
+  // hooks) ; c'est seulement APRES qu'on peut retourner un rendu different
+  // selon l'etat d'auth, sans jamais appeler de hook de facon conditionnelle.
+  if (!isLoaded) return null; // Clerk relit encore la session sauvegardee.
+  if (!isSignedIn) return <Redirect href="/login" />;
 
   const query = searchQuery.trim().toLowerCase();
   const filteredListings = LISTINGS.filter((listing) => {
