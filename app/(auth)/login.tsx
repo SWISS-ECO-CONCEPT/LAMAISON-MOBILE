@@ -1,35 +1,109 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, SafeAreaView } from 'react-native';
-import { Link } from 'expo-router';
+import { View, Text, TextInput, Pressable, StyleSheet, SafeAreaView, ActivityIndicator, Image } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+import { useSignIn, useAuth, useUser } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { signInUser } from '../../src/services/authService';
 
 export default function LoginScreen() {
-  // Comme en React web : un state contrôlé par champ. Rien de nouveau ici,
-  // useState fonctionne exactement pareil en React Native.
+  // `signIn` est l'objet Clerk qui pilote le processus de connexion.
+  // `isSignInLoaded` est faux tant que le SDK Clerk n'a pas fini de
+  // s'initialiser — tenter une connexion avant ça produirait une erreur
+  // confuse, d'où la garde plus bas dans handleLogin.
+  const { signIn, isLoaded: isSignInLoaded, setActive } = useSignIn();
+  // `getToken` sert APRÈS la connexion, pour prouver au backend qu'on est
+  // bien authentifié. `userId` est l'identifiant Clerk une fois connecté.
+  const { getToken, userId } = useAuth();
+  const { user: clerkUser } = useUser();
+  // Le profil métier (rôle, id interne...) vit dans notre propre contexte,
+  // pas dans Clerk — voir authService.ts pour pourquoi.
+  const { updateUser } = useAuthContext();
+  const router = useRouter();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleLogin = () => {
-    // Placeholder pour l'instant — on branchera la vraie connexion Clerk
-    // à l'étape "Authentification" du planning, une fois cet écran validé.
-    console.log('Connexion avec', email);
+  const handleLogin = async () => {
+    // Rien à faire si Clerk n'est pas prêt ou si les fonctions attendues
+    // n'existent pas encore (même défense que côté web).
+    if (!isSignInLoaded || !signIn || !setActive) return;
+    setErrorMessage('');
+    setLoading(true);
+    try {
+      // Étape 1 : Clerk vérifie lui-même l'email + mot de passe. Notre code
+      // ne voit et ne stocke jamais le mot de passe en clair.
+      const result = await signIn.create({ identifier: email, password });
+
+      if (result.status === 'complete') {
+        // Étape 2 : on active la session — à partir d'ici, l'utilisateur
+        // est authentifié aux yeux de Clerk.
+        await setActive({ session: result.createdSessionId });
+
+        try {
+          // Étape 3 : on récupère un token fraîchement émis pour PROUVER
+          // au backend qu'on est bien ce compte Clerk (Authorization Bearer).
+          const token = await getToken();
+          const clerkId = userId || clerkUser?.id;
+          if (clerkId && token) {
+            // Étape 4 : on va chercher le VRAI profil (id interne, rôle...)
+            // dans notre BDD — ce n'est pas Clerk qui décide du rôle.
+            const sync = await signInUser(clerkId, token);
+            const dbUser = sync?.user ?? sync;
+            updateUser({
+              id: dbUser?.id,
+              clerkId,
+              firstname: dbUser?.firstname,
+              email: dbUser?.email,
+              role: dbUser?.role,
+              phone: dbUser?.phone,
+            });
+            // Étape 5 : on redirige selon le rôle renvoyé par LA BASE,
+            // jamais selon une valeur qu'on aurait pu manipuler côté client.
+            router.replace(dbUser?.role === 'AGENT' ? '/accueil' : '/');
+          } else {
+            // Cas limite : la session Clerk est bien active mais on n'a pas
+            // pu récupérer de token/id — on laisse quand même entrer plutôt
+            // que de bloquer l'utilisateur, RootLayoutNav gérera la suite.
+            router.replace('/');
+          }
+        } catch (syncErr) {
+          // La connexion Clerk a réussi mais la synchro BDD a échoué
+          // (réseau, backend down...) — on ne bloque pas l'utilisateur pour
+          // autant : il est bien connecté, seul son profil détaillé manque
+          // temporairement. On log pour pouvoir diagnostiquer plus tard.
+          console.warn('Sync BDD echouee apres connexion', syncErr);
+          router.replace('/');
+        }
+      } else {
+        // Cas rare : Clerk demande une étape supplémentaire (2FA, etc.)
+        // qu'on ne gère pas encore dans cet écran.
+        setErrorMessage('Veuillez compléter la connexion.');
+      }
+    } catch (err: any) {
+      // Message générique par défaut — on affiche le détail Clerk s'il y
+      // en a un (ex: "mot de passe incorrect"), sinon un message neutre.
+      setErrorMessage(
+        err?.errors?.[0]?.longMessage || 'Identifiants incorrects. Vérifie ton e-mail et ton mot de passe.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    // SafeAreaView : évite que le contenu passe sous l'encoche/la barre de
-    // statut iOS ou la barre système Android. Équivalent RN du padding-top
-    // env(safe-area-inset-top) qu'on utilise dans les artifacts.
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-
-        {/* En-tête : logo + nom, comme dans la maquette */}
         <View style={styles.brand}>
-          <View style={styles.logoBox}>
-            <MaterialIcons name="home" size={24} color={colors.white} />
-          </View>
-          <Text style={styles.brandName}>LAMAISON</Text>
+          <Image
+            source={require('../../assets/images/logo.jpg')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
 
         <Text style={styles.title}>Bon retour chez vous</Text>
@@ -37,7 +111,6 @@ export default function LoginScreen() {
           Connectez-vous pour suivre vos annonces, vos visites et vos échanges.
         </Text>
 
-        {/* Champ email */}
         <View style={styles.field}>
           <Text style={styles.label}>Adresse e-mail</Text>
           <View style={styles.inputWrapper}>
@@ -48,14 +121,12 @@ export default function LoginScreen() {
               placeholderTextColor="#9ca3af"
               value={email}
               onChangeText={setEmail}
-              // Ces deux props n'existent pas sur le web — spécifiques mobile :
-              autoCapitalize="none"  // évite que le clavier mette une majuscule automatique
-              keyboardType="email-address"  // adapte le clavier virtuel (affiche le @ directement)
+              autoCapitalize="none"
+              keyboardType="email-address"
             />
           </View>
         </View>
 
-        {/* Champ mot de passe */}
         <View style={styles.field}>
           <Text style={styles.label}>Mot de passe</Text>
           <View style={[styles.inputWrapper, styles.inputWrapperFocused]}>
@@ -65,7 +136,7 @@ export default function LoginScreen() {
               placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry={!showPassword}  // équivalent RN de type="password"
+              secureTextEntry={!showPassword}
             />
             <Pressable onPress={() => setShowPassword(!showPassword)}>
               <MaterialIcons
@@ -77,17 +148,24 @@ export default function LoginScreen() {
           </View>
         </View>
 
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
         <View style={styles.row}>
           <Text style={styles.link}>Mot de passe oublié ?</Text>
         </View>
 
-        {/* Bouton principal. Pressable plutôt que <button> (qui n'existe pas
-            en RN) — gère nativement les états pressed/disabled sur tactile. */}
-        <Pressable style={styles.primaryButton} onPress={handleLogin}>
-          <Text style={styles.primaryButtonText}>Se connecter</Text>
+        <Pressable
+          style={[styles.primaryButton, (loading || !isSignInLoaded) && styles.primaryButtonDisabled]}
+          onPress={handleLogin}
+          disabled={loading || !isSignInLoaded}>
+          {loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.primaryButtonText}>Se connecter</Text>
+          )}
         </Pressable>
 
-        <View style={styles.dividerRow}>
+        {/* <View style={styles.dividerRow}>
           <View style={styles.divider} />
           <Text style={styles.dividerText}>OU</Text>
           <View style={styles.divider} />
@@ -96,13 +174,10 @@ export default function LoginScreen() {
         <Pressable style={styles.secondaryButton}>
           <MaterialIcons name="phone-iphone" size={20} color="#374151" />
           <Text style={styles.secondaryButtonText}>Continuer avec mon numéro</Text>
-        </Pressable>
+        </Pressable> */}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Nouveau sur LAMAISON ? </Text>
-          {/* Link : le composant de navigation d'expo-router, équivalent du
-              <Link> de React Router web. "href" pointe vers un chemin de
-              fichier dans app/, pas une URL. */}
           <Link href="/signup" asChild>
             <Pressable>
               <Text style={styles.footerLink}>Créer un compte</Text>
@@ -114,58 +189,15 @@ export default function LoginScreen() {
   );
 }
 
-// StyleSheet.create : contrairement à un simple objet JS, RN optimise ces
-// styles en interne (validation, et sur certaines plateformes conversion en
-// identifiants numériques réutilisés au lieu de recréer l'objet à chaque
-// rendu). Convention systématique en React Native, on la garde partout.
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,  // occupe tout l'écran disponible — quasi toujours flex:1 sur le conteneur racine
-    backgroundColor: colors.white,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
-  brand: {
-    flexDirection: 'row',  // par défaut c'est column, donc ici on l'inverse explicitement
-    alignItems: 'center',
-    gap: 10,
-  },
-  logoBox: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandName: {
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  title: {
-    marginTop: 40,
-    fontSize: 30,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.textMuted,
-  },
-  field: {
-    marginTop: 20,
-    gap: 7,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#374151',
-  },
+  container: { flex: 1, backgroundColor: colors.white },
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 20 },
+  brand: { alignItems: 'center', marginVertical: 10 },
+  logoImage: { width: 180, height: 60 },
+  title: { marginTop: 40, fontSize: 30, fontWeight: '800', color: colors.text },
+  subtitle: { marginTop: 8, fontSize: 15, lineHeight: 22, color: colors.textMuted },
+  field: { marginTop: 20, gap: 7 },
+  label: { fontSize: 13, fontWeight: '700', color: '#374151' },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -177,28 +209,13 @@ const styles = StyleSheet.create({
   },
   inputWrapperFocused: {
     backgroundColor: colors.white,
-    // RN n'a pas box-shadow — sur iOS on utilise shadowColor/shadowOffset/etc,
-    // sur Android "elevation". Pour un simple contour comme ici, plus simple
-    // et cross-plateforme d'utiliser borderWidth + borderColor.
     borderWidth: 2,
     borderColor: colors.primary,
   },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  row: {
-    marginTop: 14,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  link: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.primary,
-  },
+  input: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.text },
+  errorText: { marginTop: 12, fontSize: 13, fontWeight: '700', color: colors.danger },
+  row: { marginTop: 14, flexDirection: 'row', justifyContent: 'flex-end' },
+  link: { fontSize: 13, fontWeight: '700', color: colors.primary },
   primaryButton: {
     marginTop: 26,
     backgroundColor: colors.primary,
@@ -206,27 +223,11 @@ const styles = StyleSheet.create({
     paddingVertical: 17,
     alignItems: 'center',
   },
-  primaryButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  dividerRow: {
-    marginTop: 26,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#9ca3af',
-  },
+  primaryButtonDisabled: { opacity: 0.7 },
+  primaryButtonText: { color: colors.white, fontSize: 16, fontWeight: '800' },
+  dividerRow: { marginTop: 26, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  divider: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { fontSize: 12, fontWeight: '700', color: '#9ca3af' },
   secondaryButton: {
     marginTop: 18,
     flexDirection: 'row',
@@ -237,24 +238,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#374151',
-  },
-  footer: {
-    marginTop: 'auto',  // pousse le footer en bas — marche pareil qu'en CSS flexbox web
-    marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  footerText: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  footerLink: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.primary,
-  },
+  secondaryButtonText: { fontSize: 15, fontWeight: '700', color: '#374151' },
+  footer: { marginTop: 'auto', marginBottom: 20, flexDirection: 'row', justifyContent: 'center' },
+  footerText: { fontSize: 14, color: colors.textMuted },
+  footerLink: { fontSize: 14, fontWeight: '800', color: colors.primary },
 });
