@@ -2,12 +2,15 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, Pressable } from 'rea
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../src/config/theme';
-import { LISTINGS } from '../src/data/listings';
 import ListingCard from '../src/components/ListingCard';
+import type { Listing } from '../src/data/listings';
 
 export default function FavorisScreen() {
   const router = useRouter();
-  const favorites = LISTINGS.filter((listing) => listing.favorite);
+  // TODO Phase B : brancher favorisService.getUserFavoris(clerkId, token)
+  // et récupérer les annonces correspondantes. Pour l'instant, liste vide
+  // honnête plutôt que de réafficher l'ancien mock figé sur "favorite: true".
+  const favorites: Listing[] = [];
 
   return (
     <SafeAreaView style={styles.container}>
