@@ -1,34 +1,95 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { CURRENT_USER } from '../../src/data/user';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { updateUserRole } from '../../src/services/authService';
+import { confirmAction, showError } from '../../src/lib/dialogs';
 
 export default function ProfilScreen() {
     const router = useRouter();
-    const { signOut } = useAuth();
+    // `userId`/`getToken` viennent de Clerk (identité + preuve d'identité).
+    // `useUser()` donne l'objet Clerk complet — on en a besoin pour appeler
+    // `.reload()` après le changement de rôle (le point le plus important
+    // de ce fichier, voir plus bas).
+    const { signOut, userId, getToken } = useAuth();
+    const { user: clerkUser } = useUser();
+    // Renommé en `dbUser` pour ne pas entrer en collision avec `clerkUser` :
+    // deux objets "user" différents, deux sources différentes (Clerk = identité,
+    // AuthContext/BDD = rôle + données métier).
+    const { user: dbUser, updateUser, clearUser } = useAuthContext();
     const [alertsEnabled, setAlertsEnabled] = useState(true);
     const [signingOut, setSigningOut] = useState(false);
+    const [switchingRole, setSwitchingRole] = useState(false);
 
     const handleLogout = async () => {
         setSigningOut(true);
         try {
-            // signOut() invalide la session cote Clerk ET vide le tokenCache
-            // (expo-secure-store) -- sans ca, le jeton reste dans le Keychain/
-            // Keystore de l'appareil et l'app rouvre toujours sur l'accueil,
-            // meme apres un `expo start -c` (qui ne touche que le cache Metro,
-            // jamais le stockage securise de l'OS).
             await signOut();
-            // Filet de securite : useAuth() dans RootLayoutNav et dans
-            // (tabs)/index.tsx redirige deja vers /login des que isSignedIn
-            // passe a false, mais un replace() explicite evite d'attendre
-            // le prochain re-render pour un retour visuel immediat.
+            // Vide le profil BDD local (id, role, phone...) stocké dans
+            // AuthContext + AsyncStorage -- sinon le rôle de l'ancien compte
+            // reste affiché au prochain lancement, avant même un nouveau login.
+            clearUser();
             router.replace('/login');
         } catch (err) {
             console.error('Erreur lors de la deconnexion', err);
             setSigningOut(false);
+        }
+    };
+
+    // Étape 1 : confirmation avant d'agir -- changer de rôle n'est pas un
+    // simple réglage cosmétique qu'on veut pouvoir déclencher par erreur.
+    // Pas de garde sur `dbUser.role` ici : si on est sur cet écran, c'est que
+    // le routage (basé sur Clerk) nous considère particulier. Si la copie
+    // locale dit déjà AGENT, les deux sources ont divergé -- bloquer le clic
+    // rendrait le bouton inerte sans explication ; on relance plutôt la
+    // synchro, l'appel backend est idempotent.
+    const handleSwitchToAgent = () => {
+        if (switchingRole) return;
+        confirmAction('Passer en agent immobilier', 'Vous pourrez publier des annonces et gérer des demandes de rendez-vous.', confirmSwitchToAgent);
+    };
+
+    // Étape 2 : l'appel réel, seulement après confirmation.
+    const confirmSwitchToAgent = async () => {
+        const clerkId = userId || clerkUser?.id;
+        if (!clerkId) {
+      showError('Erreur', 'Session introuvable, reconnecte-toi.');
+      return;
+    }
+
+        setSwitchingRole(true);
+        try {
+            const token = await getToken();
+            if (!token) throw new Error('Session invalide, reconnecte-toi.');
+
+            // C'est CET appel qui fait foi : il met à jour la colonne `role`
+            // en base (source de vérité) ; le backend patch en plus les
+            // métadonnées Clerk de son côté (voir auth.services.ts).
+            const result = await updateUserRole(clerkId, 'AGENT', token);
+            const updated = result?.user ?? result;
+
+            // Indispensable : RootLayoutNav décide de la redirection d'après
+            // `unsafeMetadata.role` de Clerk. Le backend tente de le mettre à
+            // jour, mais sans garantie (clé secrète absente, erreur réseau...).
+            // `unsafeMetadata` est modifiable côté client : on l'écrit nous-mêmes,
+            // ce qui rafraîchit aussi l'objet `clerkUser` en mémoire.
+            await clerkUser?.update({
+                unsafeMetadata: { ...clerkUser.unsafeMetadata, role: updated?.role ?? 'AGENT' },
+            });
+
+            // Mise à jour de la copie locale pour que l'UI change tout de
+            // suite, sans attendre un aller-retour réseau supplémentaire.
+            updateUser({ ...dbUser, role: updated?.role ?? 'AGENT' });
+
+            router.replace('/accueil');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Erreur lors du changement de rôle.';
+            showError('Erreur', message);
+        } finally {
+            setSwitchingRole(false);
         }
     };
 
@@ -71,12 +132,22 @@ export default function ProfilScreen() {
                             <View style={styles.roleOptionActive}>
                                 <Text style={styles.roleOptionTextActive}>Particulier</Text>
                             </View>
-                            <Pressable style={styles.roleOption} onPress={() => router.push('/accueil')}>
-                                <Text style={styles.roleOptionText}>Agent immobilier</Text>
+                            <Pressable
+                                style={styles.roleOption}
+                                onPress={handleSwitchToAgent}
+                                disabled={switchingRole}>
+                                {switchingRole ? (
+                                    <ActivityIndicator color={colors.textMuted} />
+                                ) : (
+                                    <Text style={styles.roleOptionText}>Agent immobilier</Text>
+                                )}
                             </Pressable>
                         </View>
+                        {/* Texte corrigé : l'ancien disait "nécessite une vérification de
+                            votre carte professionnelle", ce qui était faux -- aucune
+                            vérification n'existe côté backend (rôle auto-déclaré). */}
                         <Text style={styles.roleHint}>
-                            Passer en agent nécessite une vérification de votre carte professionnelle.
+                            Vous pourrez publier des annonces et gérer des rendez-vous.
                         </Text>
                     </View>
 
