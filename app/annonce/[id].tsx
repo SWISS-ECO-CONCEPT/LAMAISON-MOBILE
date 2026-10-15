@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   Share,
+  Linking,
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -109,6 +110,25 @@ export default function AnnonceDetailScreen() {
     } catch (err) {
       console.error('Erreur lors du partage de l\'annonce', err);
     }
+  };
+
+  const handleCall = () => {
+    if (!listing.ownerPhone) return;
+    Linking.openURL(`tel:${listing.ownerPhone}`);
+  };
+
+  const handleChat = () => {
+    router.push({
+      pathname: '/conversation/[id]',
+      params: { id: String(listing.ownerId), name: listing.ownerName, subtitle: listing.ownerRole },
+    });
+  };
+
+  const handleRequestRdv = () => {
+    router.push({
+      pathname: '/demande-rdv/[id]',
+      params: { id: listing.id, listingTitle: listing.title, listingReference: listing.reference },
+    });
   };
 
   return (
@@ -262,21 +282,20 @@ export default function AnnonceDetailScreen() {
             <Text style={styles.agentName}>{listing.ownerName}</Text>
             <Text style={styles.agentRole}>{listing.ownerRole}</Text>
           </View>
-          <Pressable style={styles.agentActionButton}>
+          <Pressable style={styles.agentActionButton} onPress={handleCall}>
             <MaterialIcons name="call" size={20} color={colors.primaryDark} />
           </Pressable>
-          <Pressable style={styles.agentActionButton}>
+          <Pressable style={styles.agentActionButton} onPress={handleChat}>
             <MaterialIcons name="chat-bubble" size={20} color={colors.primaryDark} />
           </Pressable>
         </View>
       </ScrollView>
 
       {/* Le "prochain créneau" était inventé (`nextSlot`) -- aucun endpoint
-          ne calcule de disponibilité aujourd'hui. On garde le CTA, sans le
-          créneau fictif. La prise de RDV réelle (POST /rdvs) est une
-          fonctionnalité à part, pas branchée ici. */}
+          ne calcule de disponibilité aujourd'hui. Le CTA ouvre maintenant
+          le vrai formulaire de demande (POST /rdvs), sans créneau fictif. */}
       <View style={styles.footer}>
-        <Pressable style={styles.footerButton}>
+        <Pressable style={styles.footerButton} onPress={handleRequestRdv}>
           <Text style={styles.footerButtonText}>Demander un rendez-vous</Text>
         </Pressable>
       </View>
