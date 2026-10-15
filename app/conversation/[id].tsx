@@ -1,38 +1,98 @@
-import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
-import { getConversationById, ChatMessage } from '../../src/data/conversations';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { getConversation, createMessage, type MessageApi } from '../../src/services/messageService';
+import { formatDayLabel, formatTimeOnly } from '../../src/utils/time';
 
+// Avant : conversation entièrement mockée (src/data/conversations.ts),
+// aucun appel réseau, les messages envoyés ne survivaient même pas à la
+// navigation. Maintenant branché sur GET/POST /messages. Ce qui disparaît
+// et pourquoi : pas de statut "en ligne" (aucune présence en base), pas de
+// coche "lu" (Message n'a pas de champ `read`), pas de carte "proposition
+// de créneau" avec Accepter/Refuser (un message est juste du texte --
+// la vraie validation d'un RDV passe par les routes /rdvs, pas par le chat),
+// pas de carte "annonce liée" (aucune relation Message <-> Annonce en base).
 export default function ConversationScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, name, subtitle } = useLocalSearchParams<{ id: string; name?: string; subtitle?: string }>();
   const router = useRouter();
-  const conversation = getConversationById(id);
-  const [messages, setMessages] = useState<ChatMessage[]>(conversation?.messages ?? []);
+  const { getToken } = useAuth();
+  const { user } = useAuthContext();
+  const myDbId = user?.id ? Number(user.id) : undefined;
+  const otherUserId = Number(id);
+
+  const [messages, setMessages] = useState<MessageApi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
 
-  if (!conversation) {
-    return (
-      <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Conversation introuvable.</Text>
-        <Link href="/" asChild>
-          <Pressable>
-            <Text style={styles.notFoundLink}>Retour à l'accueil</Text>
-          </Pressable>
-        </Link>
-      </View>
-    );
-  }
+  const loadMessages = useCallback(async () => {
+    if (!myDbId || !otherUserId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const data = await getConversation(myDbId, otherUserId, token);
+      setMessages(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement de la conversation.');
+    } finally {
+      setLoading(false);
+    }
+  }, [myDbId, otherUserId, getToken]);
 
-  const sendMessage = () => {
-    if (!draft.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: `local-${Date.now()}`, type: 'text', sender: 'me', text: draft.trim(), time: 'à l\'instant' },
-    ]);
-    setDraft('');
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  const sendMessage = async () => {
+    const content = draft.trim();
+    if (!content || !myDbId || !otherUserId || sending) return;
+    setSending(true);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const message = await createMessage(myDbId, otherUserId, content, token);
+      setMessages((prev) => [...prev, message]);
+      setDraft('');
+    } catch (err) {
+      console.error('Erreur lors de l\'envoi du message', err);
+    } finally {
+      setSending(false);
+    }
   };
+
+  // Regroupe les messages par jour calendaire pour le séparateur -- calculé
+  // sur les vraies dates plutôt qu'un "AUJOURD'HUI" fixe qui restait affiché
+  // même au-dessus de vieux messages.
+  const groups = useMemo(() => {
+    const byDay: { label: string; items: MessageApi[] }[] = [];
+    for (const message of messages) {
+      const label = formatDayLabel(message.createdAt);
+      const lastGroup = byDay[byDay.length - 1];
+      if (lastGroup && lastGroup.label === label) {
+        lastGroup.items.push(message);
+      } else {
+        byDay.push({ label, items: [message] });
+      }
+    }
+    return byDay;
+  }, [messages]);
 
   return (
     <KeyboardAvoidingView
@@ -44,92 +104,54 @@ export default function ConversationScreen() {
         </Pressable>
         <View style={styles.headerAvatarWrap}>
           <View style={styles.headerAvatar} />
-          {conversation.online && <View style={styles.headerOnlineDot} />}
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>{conversation.name}</Text>
-          <Text style={styles.headerStatus}>{conversation.online ? 'en ligne' : 'hors ligne'}</Text>
+          <Text style={styles.headerName}>{name || 'Conversation'}</Text>
+          {subtitle ? <Text style={styles.headerStatus}>{subtitle}</Text> : null}
         </View>
-        <Pressable>
-          <MaterialIcons name="call" size={22} color={colors.primary} />
-        </Pressable>
-        <Pressable>
-          <MaterialIcons name="more-vert" size={22} color={colors.textLight} />
-        </Pressable>
       </View>
 
-      {conversation.listing && (
-        <View style={styles.listingBar}>
-          <View style={styles.listingCard}>
-            <View style={styles.listingThumb} />
-            <View style={styles.listingInfo}>
-              <Text style={styles.listingTitle}>{conversation.listing.title}</Text>
-              <Text style={styles.listingPrice}>{conversation.listing.price}</Text>
-            </View>
-            <Pressable
-              style={styles.listingViewButton}
-              onPress={() =>
-                router.push({ pathname: '/annonce/[id]', params: { id: conversation.listing!.id } })
-              }>
-              <Text style={styles.listingViewButtonText}>Voir</Text>
-            </Pressable>
-          </View>
+      {loading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator color={colors.primary} />
         </View>
+      ) : error ? (
+        <View style={styles.centerState}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Pressable onPress={loadMessages}>
+            <Text style={styles.retryText}>Réessayer</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <ScrollView style={styles.thread} contentContainerStyle={styles.threadContent}>
+          {messages.length === 0 ? (
+            <Text style={styles.emptyText}>Aucun message pour l'instant -- écrivez le premier.</Text>
+          ) : (
+            groups.map((group) => (
+              <View key={group.label}>
+                <Text style={styles.dateSeparator}>{group.label}</Text>
+                {group.items.map((message) => {
+                  const mine = message.senderId === myDbId;
+                  return (
+                    <View
+                      key={message.id}
+                      style={[styles.bubble, mine ? styles.bubbleMe : styles.bubbleThem]}>
+                      <Text style={mine ? styles.bubbleTextMe : styles.bubbleTextThem}>
+                        {message.content}
+                      </Text>
+                      <Text style={mine ? styles.bubbleTimeMe : styles.bubbleTimeThem}>
+                        {formatTimeOnly(message.createdAt)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ))
+          )}
+        </ScrollView>
       )}
 
-      <ScrollView style={styles.thread} contentContainerStyle={styles.threadContent}>
-        <Text style={styles.dateSeparator}>AUJOURD'HUI</Text>
-
-        {messages.map((message) =>
-          message.type === 'text' ? (
-            <View
-              key={message.id}
-              style={[
-                styles.bubble,
-                message.sender === 'me' ? styles.bubbleMe : styles.bubbleThem,
-              ]}>
-              <Text style={message.sender === 'me' ? styles.bubbleTextMe : styles.bubbleTextThem}>
-                {message.text}
-              </Text>
-              <View style={styles.bubbleFooter}>
-                <Text style={message.sender === 'me' ? styles.bubbleTimeMe : styles.bubbleTimeThem}>
-                  {message.time}
-                </Text>
-                {message.sender === 'me' && message.read && (
-                  <MaterialIcons name="done-all" size={14} color={colors.white} />
-                )}
-              </View>
-            </View>
-          ) : (
-            <View key={message.id} style={styles.proposalCard}>
-              <View style={styles.proposalBanner}>
-                <Text style={styles.proposalBannerText}>NOUVELLE PROPOSITION DE CRÉNEAU</Text>
-              </View>
-              <View style={styles.proposalBody}>
-                <Text style={styles.proposalSlot}>{message.slotLabel}</Text>
-                <Text style={styles.proposalListing}>{message.listingSummary}</Text>
-                <View style={styles.proposalActions}>
-                  <Pressable
-                    style={styles.proposalAccept}
-                    onPress={() => console.log('Accepter créneau', message.id)}>
-                    <Text style={styles.proposalAcceptText}>Accepter</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.proposalDecline}
-                    onPress={() => console.log('Refuser créneau', message.id)}>
-                    <Text style={styles.proposalDeclineText}>Refuser</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          )
-        )}
-      </ScrollView>
-
       <View style={styles.composer}>
-        <Pressable style={styles.attachButton}>
-          <MaterialIcons name="add" size={22} color="#374151" />
-        </Pressable>
         <TextInput
           style={styles.composerInput}
           placeholder="Écrire un message…"
@@ -138,8 +160,12 @@ export default function ConversationScreen() {
           onChangeText={setDraft}
           onSubmitEditing={sendMessage}
         />
-        <Pressable style={styles.sendButton} onPress={sendMessage}>
-          <MaterialIcons name="send" size={20} color={colors.white} />
+        <Pressable style={styles.sendButton} onPress={sendMessage} disabled={sending}>
+          {sending ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <MaterialIcons name="send" size={20} color={colors.white} />
+          )}
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -148,9 +174,10 @@ export default function ConversationScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.appBackground },
-  notFound: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  notFoundText: { fontSize: 15, color: colors.textMuted },
-  notFoundLink: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 20 },
+  errorText: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
+  retryText: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  emptyText: { marginTop: 40, textAlign: 'center', fontSize: 14, color: colors.textMuted },
   header: {
     paddingTop: 56,
     paddingHorizontal: 16,
@@ -167,49 +194,19 @@ const styles = StyleSheet.create({
   },
   headerAvatarWrap: { position: 'relative' },
   headerAvatar: { width: 40, height: 40, borderRadius: 99, backgroundColor: '#E9EDEA' },
-  headerOnlineDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 11,
-    height: 11,
-    borderRadius: 99,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
   headerInfo: { flex: 1, minWidth: 0 },
   headerName: { fontSize: 16, fontWeight: '800', color: colors.text },
   headerStatus: { fontSize: 12, fontWeight: '700', color: colors.primary },
-  listingBar: { paddingHorizontal: 16, paddingTop: 12 },
-  listingCard: {
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: colors.text,
-    shadowOpacity: 0.07,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  listingThumb: { width: 46, height: 46, borderRadius: 10, backgroundColor: '#E9EDEA' },
-  listingInfo: { flex: 1, minWidth: 0 },
-  listingTitle: { fontSize: 13, fontWeight: '800', color: colors.text },
-  listingPrice: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
-  listingViewButton: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  listingViewButtonText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
   thread: { flex: 1 },
   threadContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16, gap: 10 },
-  dateSeparator: { textAlign: 'center', fontSize: 11, fontWeight: '800', color: colors.textLight },
-  bubble: { maxWidth: '78%', borderRadius: 16, padding: 12 },
+  dateSeparator: {
+    textAlign: 'center',
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textLight,
+    marginBottom: 10,
+  },
+  bubble: { maxWidth: '78%', borderRadius: 16, padding: 12, marginBottom: 10 },
   bubbleThem: {
     alignSelf: 'flex-start',
     backgroundColor: '#ECEFED',
@@ -222,43 +219,8 @@ const styles = StyleSheet.create({
   },
   bubbleTextThem: { fontSize: 14, lineHeight: 21, color: colors.text },
   bubbleTextMe: { fontSize: 14, lineHeight: 21, color: colors.white },
-  bubbleFooter: { marginTop: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
-  bubbleTimeThem: { fontSize: 10, color: colors.textLight },
-  bubbleTimeMe: { fontSize: 10, color: 'rgba(255,255,255,.8)' },
-  proposalCard: {
-    alignSelf: 'flex-start',
-    width: '84%',
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: colors.text,
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  proposalBanner: { backgroundColor: colors.primaryLight, paddingHorizontal: 13, paddingVertical: 8 },
-  proposalBannerText: { fontSize: 11, fontWeight: '800', color: colors.primaryDark, letterSpacing: 0.4 },
-  proposalBody: { padding: 13 },
-  proposalSlot: { fontSize: 15, fontWeight: '800', color: colors.text },
-  proposalListing: { marginTop: 3, fontSize: 12, color: colors.textMuted },
-  proposalActions: { marginTop: 12, flexDirection: 'row', gap: 8 },
-  proposalAccept: {
-    flex: 1.3,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  proposalAcceptText: { fontSize: 13, fontWeight: '800', color: colors.white },
-  proposalDecline: {
-    flex: 1,
-    backgroundColor: '#F0F2F0',
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  proposalDeclineText: { fontSize: 13, fontWeight: '800', color: '#374151' },
+  bubbleTimeThem: { marginTop: 5, fontSize: 10, color: colors.textLight, textAlign: 'right' },
+  bubbleTimeMe: { marginTop: 5, fontSize: 10, color: 'rgba(255,255,255,.8)', textAlign: 'right' },
   composer: {
     backgroundColor: colors.white,
     paddingHorizontal: 14,
@@ -272,14 +234,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -1 },
     shadowRadius: 4,
     elevation: 3,
-  },
-  attachButton: {
-    width: 42,
-    height: 42,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   composerInput: {
     flex: 1,

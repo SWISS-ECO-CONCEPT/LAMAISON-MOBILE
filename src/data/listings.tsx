@@ -25,8 +25,10 @@ export type Listing = {
   publishedAgo: string;
   description: string;
   negotiable: boolean;
+  ownerId: number;
   ownerName: string;
   ownerRole: string;
+  ownerPhone: string | null;
 };
 
 // "1 234 567" -- espace simple plutôt que `toLocaleString('fr-FR')`, qui
@@ -61,7 +63,9 @@ export function mapAnnonceToListing(a: AnnonceApi): Listing {
     publishedAgo: formatPublishedAgo(a.createdAt),
     description: a.description,
     negotiable: !!a.negotiable,
+    ownerId: a.proprietaireId,
     ownerName: a.proprietaire?.firstname ?? 'Propriétaire',
     ownerRole: a.proprietaire?.role === 'AGENT' ? 'Agent LAMAISON' : 'Particulier',
+    ownerPhone: a.proprietaire?.phone ?? null,
   };
 }

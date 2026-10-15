@@ -103,6 +103,7 @@ function RootLayoutNav() {
         <Stack.Screen name="favoris" options={{ headerShown: false }} />
         <Stack.Screen name="(agent)" options={{ headerShown: false }} />
         <Stack.Screen name="publier-annonce" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="demande-rdv/[id]" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );
