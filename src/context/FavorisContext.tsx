@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
+import { useStableGetToken } from '../lib/useStableGetToken';
 import { getUserFavoris, addFavori, removeFavori, type FavoriApi } from '../services/favorisService';
 import { mapAnnonceToListing, type Listing } from '../data/listings';
 
@@ -22,17 +23,11 @@ const defaultValue: FavorisContextProps = {
 const FavorisContext = createContext<FavorisContextProps>(defaultValue);
 
 export const FavorisProvider = ({ children }: { children: ReactNode }) => {
-  const { isSignedIn, userId: clerkId, getToken } = useAuth();
+  const { isSignedIn, userId: clerkId } = useAuth();
+  // getToken stable : voir src/lib/useStableGetToken.ts (évite la boucle de rechargement).
+  const getToken = useStableGetToken();
   const [favoris, setFavoris] = useState<FavoriApi[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Le useAuth de @clerk/clerk-expo recrée `getToken` à CHAQUE rendu (pas de
-  // useCallback, voir node_modules/@clerk/clerk-expo/dist/hooks/useAuth.js).
-  // Le mettre dans les dépendances d'un hook relancerait l'effet de chargement
-  // après chaque rendu -> boucle infinie ("Maximum update depth exceeded").
-  // La ref donne toujours la version courante sans être une dépendance.
-  const getTokenRef = useRef(getToken);
-  getTokenRef.current = getToken;
 
   // Numéro du dernier chargement lancé. Une réponse n'est appliquée que si
   // elle correspond encore au dernier numéro : sinon elle est périmée
@@ -67,7 +62,7 @@ export const FavorisProvider = ({ children }: { children: ReactNode }) => {
     }
     setLoading(true);
     try {
-      const token = await getTokenRef.current();
+      const token = await getToken();
       if (!token) throw new Error('Session Clerk sans token');
       const data = await getUserFavoris(clerkId, token);
       if (isLatestLoad()) setFavoris(data);
@@ -76,7 +71,7 @@ export const FavorisProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       if (isLatestLoad()) setLoading(false);
     }
-  }, [isSignedIn, clerkId]);
+  }, [isSignedIn, clerkId, getToken]);
 
   // Changement de compte sans déconnexion intermédiaire : on vide tout de
   // suite plutôt que de laisser les favoris du compte précédent affichés
@@ -96,7 +91,7 @@ export const FavorisProvider = ({ children }: { children: ReactNode }) => {
       pendingToggleIdsRef.current.add(annonceId);
 
       try {
-        const token = await getTokenRef.current();
+        const token = await getToken();
         if (!token) throw new Error('Session Clerk sans token');
         const alreadyFavorite = favoris.some((f) => f.annonceId === annonceId);
 
@@ -123,7 +118,7 @@ export const FavorisProvider = ({ children }: { children: ReactNode }) => {
         pendingToggleIdsRef.current.delete(annonceId);
       }
     },
-    [favoris, isSignedIn, clerkId, loadFavoris, invalidatePendingLoads]
+    [favoris, isSignedIn, clerkId, getToken, loadFavoris, invalidatePendingLoads]
   );
 
   const favoriteIds = useMemo(() => new Set(favoris.map((f) => f.annonceId)), [favoris]);

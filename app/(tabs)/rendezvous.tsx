@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
+import { useStableGetToken } from '../../src/lib/useStableGetToken';
+import { showError } from '../../src/lib/dialogs';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { mapAnnonceToListing } from '../../src/data/listings';
@@ -32,7 +34,8 @@ type FilterKey = (typeof FILTERS)[number]['key'];
 // messagerie -- /rdvs/:id/propose n'accepte qu'une date, pas de texte).
 export default function RendezVousScreen() {
   const router = useRouter();
-  const { userId: clerkId, getToken } = useAuth();
+  const { userId: clerkId } = useAuth();
+  const getToken = useStableGetToken();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [rdvs, setRdvs] = useState<RdvApi[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +48,7 @@ export default function RendezVousScreen() {
     setError(null);
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) throw new Error('Session expirée, reconnecte-toi.');
       const data = await getRdvsByProspect(clerkId, token);
       setRdvs(data);
     } catch (err) {
@@ -82,11 +85,13 @@ export default function RendezVousScreen() {
     setActingOnId(rdv.id);
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) throw new Error('Session expirée, reconnecte-toi.');
       await action(rdv.id, token);
       await loadRdvs();
     } catch (err) {
-      console.error('Erreur action RDV', err);
+      // L'agent/le prospect doit savoir que son action n'a pas abouti -- un
+      // simple log console laissait croire que le clic avait fonctionné.
+      showError('Action impossible', err instanceof Error ? err.message : 'Erreur lors de la mise à jour du rendez-vous.');
     } finally {
       setActingOnId(null);
     }
@@ -113,7 +118,10 @@ export default function RendezVousScreen() {
         </View>
       </View>
 
-      {loading ? (
+      {/* Spinner plein écran au premier chargement seulement : après une
+          action (accepter, refuser...), loadRdvs() recharge en gardant la
+          liste affichée, sinon elle disparaîtrait un instant (effet flash). */}
+      {loading && rdvs.length === 0 ? (
         <View style={styles.centerState}>
           <ActivityIndicator color={colors.primary} />
         </View>
