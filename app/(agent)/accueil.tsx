@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
+import { useStableGetToken } from '../../src/lib/useStableGetToken';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { useAuthContext } from '../../src/context/AuthContext';
@@ -20,7 +21,10 @@ const RECENT_COUNT = 3;
 // + GET /rdvs?agentClerkId=.
 export default function AgentHomeScreen() {
   const router = useRouter();
-  const { userId: clerkId, getToken } = useAuth();
+  const { userId: clerkId } = useAuth();
+  // getToken stable : celui de useAuth() change à chaque rendu et relançait
+  // le chargement en boucle (écran agent qui clignote). Voir src/lib/useStableGetToken.ts.
+  const getToken = useStableGetToken();
   const { user: dbUser } = useAuthContext();
   const [listings, setListings] = useState<ReturnType<typeof mapAnnonceToListing>[]>([]);
   const [totalViews, setTotalViews] = useState(0);

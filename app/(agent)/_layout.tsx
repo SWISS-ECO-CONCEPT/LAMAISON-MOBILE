@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
+import { useStableGetToken } from '../../src/lib/useStableGetToken';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -9,7 +10,10 @@ import { getRdvsByAgent } from '../../src/services/rdvService';
 
 export default function AgentTabLayout() {
   const colorScheme = useColorScheme();
-  const { userId: clerkId, getToken } = useAuth();
+  const { userId: clerkId } = useAuth();
+  // getToken stable : celui de useAuth() change à chaque rendu et relançait
+  // le chargement en boucle (écran agent qui clignote). Voir src/lib/useStableGetToken.ts.
+  const getToken = useStableGetToken();
   const [pendingCount, setPendingCount] = useState(0);
 
   // Avant : badge fixe (AGENT_PROFILE.stats.pendingRequests, un nombre en

@@ -9,6 +9,7 @@ import { useFavoris } from '../../src/context/FavorisContext';
 import { updateUserRole } from '../../src/services/authService';
 import { getRdvsByProspect } from '../../src/services/rdvService';
 import { confirmAction, showError } from '../../src/lib/dialogs';
+import { useStableGetToken } from '../../src/lib/useStableGetToken';
 
 export default function ProfilScreen() {
     const router = useRouter();
@@ -16,7 +17,10 @@ export default function ProfilScreen() {
     // `useUser()` donne l'objet Clerk complet — on en a besoin pour appeler
     // `.reload()` après le changement de rôle (le point le plus important
     // de ce fichier, voir plus bas).
-    const { signOut, userId, getToken } = useAuth();
+    const { signOut, userId } = useAuth();
+    // getToken stable : celui de useAuth() change à chaque rendu et relancerait
+    // l'effet du compteur de RDV en boucle. Voir src/lib/useStableGetToken.ts.
+    const getToken = useStableGetToken();
     const { user: clerkUser } = useUser();
     // Renommé en `dbUser` pour ne pas entrer en collision avec `clerkUser` :
     // deux objets "user" différents, deux sources différentes (Clerk = identité,
