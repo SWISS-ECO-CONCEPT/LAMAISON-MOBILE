@@ -8,6 +8,7 @@ type SearchBarProps = {
   placeholder?: string;
   onFilterPress?: () => void;
   onSubmit?: () => void;
+  filtersActive?: boolean;
 };
 
 export default function SearchBar({
@@ -16,6 +17,7 @@ export default function SearchBar({
   placeholder,
   onFilterPress,
   onSubmit,
+  filtersActive,
 }: SearchBarProps) {
   return (
     <View style={styles.row}>
@@ -39,6 +41,7 @@ export default function SearchBar({
       {onFilterPress && (
         <Pressable style={styles.filterButton} onPress={onFilterPress}>
           <MaterialIcons name="tune" size={22} color={colors.white} />
+          {filtersActive && <View style={styles.filterDot} />}
         </Pressable>
       )}
     </View>
@@ -64,5 +67,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 99,
+    backgroundColor: colors.white,
   },
 });

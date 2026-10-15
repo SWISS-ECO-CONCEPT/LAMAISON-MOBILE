@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
@@ -29,13 +29,62 @@ export default function HomeScreen() {
   // visible de cet ecran avant la redirection). Reintegree apres avoir
   // disparu sur cette branche -- voir la revue du 15/10.
   const { isLoaded, isSignedIn } = useAuth();
-  const { q } = useLocalSearchParams<{ q?: string }>();
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    q?: string;
+    prixMin?: string;
+    prixMax?: string;
+    surfaceMin?: string;
+    surfaceMax?: string;
+    chambres?: string;
+    douches?: string;
+    ville?: string;
+    quartier?: string;
+  }>();
   const [activeTransaction, setActiveTransaction] = useState<'location' | 'achat'>('location');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState(q ?? '');
+  const [searchQuery, setSearchQuery] = useState(params.q ?? '');
+  const [filters, setFilters] = useState({
+    prixMin: params.prixMin ?? '',
+    prixMax: params.prixMax ?? '',
+    surfaceMin: params.surfaceMin ?? '',
+    surfaceMax: params.surfaceMax ?? '',
+    chambres: params.chambres ?? '',
+    douches: params.douches ?? '',
+    ville: params.ville ?? '',
+    quartier: params.quartier ?? '',
+  });
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // L'écran reste monté dans la pile des tabs : revenir ici depuis
+  // recherche.tsx ou filtres.tsx change les params de la même instance,
+  // ça ne remonte pas le composant -- sans cet effet, le `useState`
+  // initial ne verrait jamais la mise à jour.
+  useEffect(() => {
+    setSearchQuery(params.q ?? '');
+    setFilters({
+      prixMin: params.prixMin ?? '',
+      prixMax: params.prixMax ?? '',
+      surfaceMin: params.surfaceMin ?? '',
+      surfaceMax: params.surfaceMax ?? '',
+      chambres: params.chambres ?? '',
+      douches: params.douches ?? '',
+      ville: params.ville ?? '',
+      quartier: params.quartier ?? '',
+    });
+  }, [
+    params.q,
+    params.prixMin,
+    params.prixMax,
+    params.surfaceMin,
+    params.surfaceMax,
+    params.chambres,
+    params.douches,
+    params.ville,
+    params.quartier,
+  ]);
 
   // `activeTransaction` existait déjà avant (les chips Location/Achat
   // changeaient bien de couleur au clic) mais ne filtrait jamais rien --
@@ -52,6 +101,14 @@ export default function HomeScreen() {
       const annonces = await getAnnonces({
         projet: activeTransaction,
         type: activeCategory ?? undefined,
+        ville: filters.ville || undefined,
+        quartier: filters.quartier || undefined,
+        prixMin: filters.prixMin ? Number(filters.prixMin) : undefined,
+        prixMax: filters.prixMax ? Number(filters.prixMax) : undefined,
+        surfaceMin: filters.surfaceMin ? Number(filters.surfaceMin) : undefined,
+        surfaceMax: filters.surfaceMax ? Number(filters.surfaceMax) : undefined,
+        chambres: filters.chambres ? Number(filters.chambres) : undefined,
+        douches: filters.douches ? Number(filters.douches) : undefined,
       });
       setListings(annonces.map(mapAnnonceToListing));
     } catch (err) {
@@ -59,7 +116,7 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeTransaction, activeCategory]);
+  }, [activeTransaction, activeCategory, filters]);
 
   useEffect(() => {
     loadListings();
@@ -107,7 +164,8 @@ export default function HomeScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Quartier, ville, type de bien…"
-            onFilterPress={() => console.log('Ouvrir les filtres avancés')}
+            onFilterPress={() => router.push({ pathname: '/filtres', params: filters })}
+            filtersActive={Object.values(filters).some(Boolean)}
           />
         </View>
 
