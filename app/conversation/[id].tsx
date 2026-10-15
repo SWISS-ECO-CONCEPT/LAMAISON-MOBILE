@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
+import { useStableGetToken } from '../../src/lib/useStableGetToken';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { useAuthContext } from '../../src/context/AuthContext';
@@ -29,7 +29,7 @@ import { formatDayLabel, formatTimeOnly } from '../../src/utils/time';
 export default function ConversationScreen() {
   const { id, name, subtitle } = useLocalSearchParams<{ id: string; name?: string; subtitle?: string }>();
   const router = useRouter();
-  const { getToken } = useAuth();
+  const getToken = useStableGetToken();
   const { user } = useAuthContext();
   const myDbId = user?.id ? Number(user.id) : undefined;
   const otherUserId = Number(id);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
+import { useStableGetToken } from '../../src/lib/useStableGetToken';
 import { colors, radius } from '../../src/config/theme';
 import { getUserConversations, type ConversationSummaryApi } from '../../src/services/messageService';
 import { formatRelativeTime } from '../../src/utils/time';
@@ -11,7 +11,7 @@ import { formatRelativeTime } from '../../src/utils/time';
 // "non lus", pas de pastille "en ligne" : ça n'existe pas en base.
 export default function MessagesScreen() {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const getToken = useStableGetToken();
   const [conversations, setConversations] = useState<ConversationSummaryApi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
