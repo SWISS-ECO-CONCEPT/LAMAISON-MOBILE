@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { mapAnnonceToListing, type Listing } from '../../src/data/listings';
 import { getAnnonces } from '../../src/services/annonceService';
+import { useAuthContext } from '../../src/context/AuthContext';
 import ListingCard from '../../src/components/ListingCard';
 import SearchBar from '../../src/components/SearchBar';
 
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   // visible de cet ecran avant la redirection). Reintegree apres avoir
   // disparu sur cette branche -- voir la revue du 15/10.
   const { isLoaded, isSignedIn } = useAuth();
+  const { user: dbUser } = useAuthContext();
   const router = useRouter();
   const params = useLocalSearchParams<{
     q?: string;
@@ -146,7 +148,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.greeting}>Bonjour 👋</Text>
+            <Text style={styles.greeting}>Bonjour{dbUser?.firstname ? ` ${dbUser.firstname}` : ''} 👋</Text>
             <Pressable style={styles.locationRow}>
               <MaterialIcons name="location-on" size={18} color={colors.primary} />
               <Text style={styles.locationText}>Douala</Text>
