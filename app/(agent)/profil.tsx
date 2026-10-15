@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../src/config/theme';
-import { AGENT_PROFILE } from '../../src/data/agent';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { updateUserRole } from '../../src/services/authService';
 import { confirmAction, showError } from '../../src/lib/dialogs';
@@ -77,12 +75,9 @@ export default function AgentProfilScreen() {
             <View style={styles.avatar} />
             <View style={styles.headerInfo}>
               <View style={styles.nameRow}>
-                <Text style={styles.name}>{AGENT_PROFILE.name}</Text>
-                {AGENT_PROFILE.verified && (
-                  <MaterialIcons name="verified" size={17} color={colors.white} />
-                )}
+                <Text style={styles.name}>{dbUser?.firstname ?? '—'}</Text>
               </View>
-              <Text style={styles.contact}>{AGENT_PROFILE.agency}</Text>
+              <Text style={styles.contact}>Agent LAMAISON</Text>
             </View>
           </View>
         </View>
