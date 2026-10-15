@@ -31,6 +31,7 @@ export default function HomeScreen() {
   const { isLoaded, isSignedIn } = useAuth();
   const { q } = useLocalSearchParams<{ q?: string }>();
   const [activeTransaction, setActiveTransaction] = useState<'location' | 'achat'>('location');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(q ?? '');
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,19 +41,25 @@ export default function HomeScreen() {
   // changeaient bien de couleur au clic) mais ne filtrait jamais rien --
   // exactement le même genre de bouton "mort" que les rôles PROSPECT/AGENT
   // qu'on a corrigés. Maintenant qu'on a un vrai service avec un filtre
-  // `projet` côté backend, on le branche pour de vrai.
+  // `projet` côté backend, on le branche pour de vrai. Même chose pour
+  // `activeCategory` : le backend normalise "maison"/"appartement" (voir
+  // normalizeTypeBien côté annonce.controller.ts), donc les clés des chips
+  // peuvent être envoyées telles quelles.
   const loadListings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const annonces = await getAnnonces({ projet: activeTransaction });
+      const annonces = await getAnnonces({
+        projet: activeTransaction,
+        type: activeCategory ?? undefined,
+      });
       setListings(annonces.map(mapAnnonceToListing));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des annonces.');
     } finally {
       setLoading(false);
     }
-  }, [activeTransaction]);
+  }, [activeTransaction, activeCategory]);
 
   useEffect(() => {
     loadListings();
@@ -117,16 +124,20 @@ export default function HomeScreen() {
             );
           })}
           <View style={styles.chipDivider} />
-          {/* Chips catégorie (maison/appart) : toujours sans filtrage réel --
-              contrairement au toggle achat/location, il n'y avait même pas
-              d'état de sélection avant. Laissé en l'état, hors scope de la
-              Phase A (pure migration de données), à traiter séparément. */}
-          {CATEGORY_FILTERS.map((category) => (
-            <Pressable key={category.key} style={styles.chip}>
-              <MaterialIcons name={category.icon} size={16} color={colors.text} />
-              <Text style={styles.chipText}>{category.label}</Text>
-            </Pressable>
-          ))}
+          {CATEGORY_FILTERS.map((category) => {
+            const active = activeCategory === category.key;
+            return (
+              <Pressable
+                key={category.key}
+                style={[styles.chip, active && styles.chipActive]}
+                // Retaper sur la catégorie déjà active désélectionne (retour à "tous les types") --
+                // il n'y a pas de chip "Tous" séparée, donc il faut bien pouvoir revenir en arrière.
+                onPress={() => setActiveCategory(active ? null : category.key)}>
+                <MaterialIcons name={category.icon} size={16} color={active ? colors.white : colors.text} />
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{category.label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 

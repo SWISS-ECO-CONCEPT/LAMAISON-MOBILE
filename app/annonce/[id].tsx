@@ -8,6 +8,7 @@ import {
   Image,
   Modal,
   ActivityIndicator,
+  Share,
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -95,6 +96,21 @@ export default function AnnonceDetailScreen() {
     setActiveImage(index);
   };
 
+  // Pas d'URL web publique pour une annonce (aucun domaine configure
+  // cote app ou backend) -- on partage le lien de deep-link natif
+  // (`scheme` dans app.json) a la place d'inventer une URL qui n'existe
+  // pas. Il n'ouvrira l'annonce que chez quelqu'un qui a deja l'app.
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        title: listing.title,
+        message: `${listing.title} — ${listing.price}${listing.priceSuffix ? ` ${listing.priceSuffix}` : ''}\n${listing.location}\nRéf. ${listing.reference}\n\nlamaisonmobile://annonce/${listing.id}`,
+      });
+    } catch (err) {
+      console.error('Erreur lors du partage de l\'annonce', err);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.gallery}>
@@ -140,7 +156,7 @@ export default function AnnonceDetailScreen() {
           <MaterialIcons name="arrow-back" size={21} color={colors.text} />
         </Pressable>
         <View style={styles.galleryActions}>
-          <Pressable style={styles.galleryActionButton}>
+          <Pressable style={styles.galleryActionButton} onPress={handleShare}>
             <MaterialIcons name="share" size={20} color={colors.text} />
           </Pressable>
           <Pressable
