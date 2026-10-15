@@ -22,7 +22,6 @@ export type Listing = {
   beds: number;
   showers: number;
   area: number;
-  favorite: boolean; // toujours `false` pour l'instant -- vrai branchement en Phase B (service favoris)
   publishedAgo: string;
   description: string;
   negotiable: boolean;
@@ -59,7 +58,6 @@ export function mapAnnonceToListing(a: AnnonceApi): Listing {
     beds: a.chambres ?? 0,
     showers: a.douches ?? 0,
     area: a.surface ?? 0,
-    favorite: false,
     publishedAgo: formatPublishedAgo(a.createdAt),
     description: a.description,
     negotiable: !!a.negotiable,

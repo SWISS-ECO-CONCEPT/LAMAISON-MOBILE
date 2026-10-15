@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../config/theme';
 import type { Listing } from '../data/listings';
+import { useFavoris } from '../context/FavorisContext';
 
 const CARD_IMAGE_HEIGHT = 160;
 const LIST_HORIZONTAL_PADDING = 20;
@@ -23,6 +24,9 @@ export default function ListingCard({ listing }: { listing: Listing }) {
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = screenWidth - LIST_HORIZONTAL_PADDING * 2;
   const [activeImage, setActiveImage] = useState(0);
+  const { isFavorite, toggleFavorite } = useFavoris();
+  const annonceId = Number(listing.id);
+  const favorite = isFavorite(annonceId);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / cardWidth);
@@ -67,11 +71,11 @@ export default function ListingCard({ listing }: { listing: Listing }) {
           </View>
         )}
 
-        <Pressable style={styles.favoriteButton}>
+        <Pressable style={styles.favoriteButton} onPress={() => toggleFavorite(annonceId)}>
           <MaterialIcons
-            name={listing.favorite ? 'favorite' : 'favorite-border'}
+            name={favorite ? 'favorite' : 'favorite-border'}
             size={20}
-            color={listing.favorite ? colors.primary : colors.textMuted}
+            color={favorite ? colors.primary : colors.textMuted}
           />
         </Pressable>
       </View>

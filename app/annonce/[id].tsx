@@ -17,11 +17,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { getAnnonceById } from '../../src/services/annonceService';
 import { mapAnnonceToListing, type Listing } from '../../src/data/listings';
+import { useFavoris } from '../../src/context/FavorisContext';
 
 export default function AnnonceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width, height } = useWindowDimensions();
+  const { isFavorite, toggleFavorite } = useFavoris();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
@@ -141,11 +143,13 @@ export default function AnnonceDetailScreen() {
           <Pressable style={styles.galleryActionButton}>
             <MaterialIcons name="share" size={20} color={colors.text} />
           </Pressable>
-          <Pressable style={styles.galleryActionButton}>
+          <Pressable
+            style={styles.galleryActionButton}
+            onPress={() => toggleFavorite(Number(listing.id))}>
             <MaterialIcons
-              name={listing.favorite ? 'favorite' : 'favorite-border'}
+              name={isFavorite(Number(listing.id)) ? 'favorite' : 'favorite-border'}
               size={20}
-              color={listing.favorite ? colors.primary : colors.text}
+              color={isFavorite(Number(listing.id)) ? colors.primary : colors.text}
             />
           </Pressable>
         </View>
