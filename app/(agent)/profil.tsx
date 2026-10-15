@@ -1,27 +1,69 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
-import { MaterialIcons } from '@expo/vector-icons';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 import { colors } from '../../src/config/theme';
-import { AGENT_PROFILE } from '../../src/data/agent';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { updateUserRole } from '../../src/services/authService';
+import { confirmAction, showError } from '../../src/lib/dialogs';
 
 export default function AgentProfilScreen() {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, userId, getToken } = useAuth();
+  const { user: clerkUser } = useUser();
+  const { user: dbUser, updateUser, clearUser } = useAuthContext();
   const [signingOut, setSigningOut] = useState(false);
+  const [switchingRole, setSwitchingRole] = useState(false);
 
-  // Voir (tabs)/profil.tsx pour le detail : signOut() vide le tokenCache
-  // (expo-secure-store), sinon le jeton reste dans le Keychain/Keystore
-  // de l'appareil meme apres un `expo start -c`.
   const handleLogout = async () => {
     setSigningOut(true);
     try {
       await signOut();
+      clearUser();
       router.replace('/login');
     } catch (err) {
       console.error('Erreur lors de la deconnexion', err);
       setSigningOut(false);
+    }
+  };
+
+  const handleSwitchToProspect = () => {
+    // Même raison que côté (tabs)/profil : pas de garde sur `dbUser.role`,
+    // une copie locale désynchronisée rendrait le bouton inerte.
+    if (switchingRole) return;
+    confirmAction(
+      'Repasser en particulier',
+      'Vous perdrez l\'accès aux outils agent (annonces, demandes de rendez-vous).',
+      confirmSwitchToProspect
+    );
+  };
+
+  const confirmSwitchToProspect = async () => {
+    const clerkId = userId || clerkUser?.id;
+    if (!clerkId) {
+      showError('Erreur', 'Session introuvable, reconnecte-toi.');
+      return;
+    }
+
+    setSwitchingRole(true);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Session invalide, reconnecte-toi.');
+
+      const result = await updateUserRole(clerkId, 'PROSPECT', token);
+      const updated = result?.user ?? result;
+
+      await clerkUser?.update({
+        unsafeMetadata: { ...clerkUser.unsafeMetadata, role: updated?.role ?? 'PROSPECT' },
+      });
+      updateUser({ ...dbUser, role: updated?.role ?? 'PROSPECT' });
+
+      router.replace('/');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur lors du changement de rôle.';
+      showError('Erreur', message);
+    } finally {
+      setSwitchingRole(false);
     }
   };
 
@@ -33,12 +75,9 @@ export default function AgentProfilScreen() {
             <View style={styles.avatar} />
             <View style={styles.headerInfo}>
               <View style={styles.nameRow}>
-                <Text style={styles.name}>{AGENT_PROFILE.name}</Text>
-                {AGENT_PROFILE.verified && (
-                  <MaterialIcons name="verified" size={17} color={colors.white} />
-                )}
+                <Text style={styles.name}>{dbUser?.firstname ?? '—'}</Text>
               </View>
-              <Text style={styles.contact}>{AGENT_PROFILE.agency}</Text>
+              <Text style={styles.contact}>Agent LAMAISON</Text>
             </View>
           </View>
         </View>
@@ -47,8 +86,15 @@ export default function AgentProfilScreen() {
           <View style={styles.card}>
             <Text style={styles.cardLabel}>MON RÔLE</Text>
             <View style={styles.roleRow}>
-              <Pressable style={styles.roleOption} onPress={() => router.push('/')}>
-                <Text style={styles.roleOptionText}>Particulier</Text>
+              <Pressable
+                style={styles.roleOption}
+                onPress={handleSwitchToProspect}
+                disabled={switchingRole}>
+                {switchingRole ? (
+                  <ActivityIndicator color={colors.textMuted} />
+                ) : (
+                  <Text style={styles.roleOptionText}>Particulier</Text>
+                )}
               </Pressable>
               <View style={styles.roleOptionActive}>
                 <Text style={styles.roleOptionTextActive}>Agent immobilier</Text>

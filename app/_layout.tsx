@@ -7,6 +7,7 @@ import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-expo';
 import { useRouter, useSegments } from 'expo-router';
 import { tokenCache } from '../src/lib/tokenCache';
 import { AuthProvider } from '../src/context/AuthContext';
+import { FavorisProvider } from '../src/context/FavorisContext';
 
 import { useColorScheme } from '@/components/useColorScheme';
 
@@ -54,7 +55,9 @@ export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <AuthProvider>
-        <RootLayoutNav />
+        <FavorisProvider>
+          <RootLayoutNav />
+        </FavorisProvider>
       </AuthProvider>
     </ClerkProvider>
   );
@@ -100,6 +103,8 @@ function RootLayoutNav() {
         <Stack.Screen name="favoris" options={{ headerShown: false }} />
         <Stack.Screen name="(agent)" options={{ headerShown: false }} />
         <Stack.Screen name="publier-annonce" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="demande-rdv/[id]" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="filtres" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

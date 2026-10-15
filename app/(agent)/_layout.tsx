@@ -1,12 +1,42 @@
+import { useEffect, useState } from 'react';
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
+import { useStableGetToken } from '../../src/lib/useStableGetToken';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { AGENT_PROFILE } from '../../src/data/agent';
+import { getRdvsByAgent } from '../../src/services/rdvService';
 
 export default function AgentTabLayout() {
   const colorScheme = useColorScheme();
+  const { userId: clerkId } = useAuth();
+  // getToken stable : celui de useAuth() change à chaque rendu et relançait
+  // le chargement en boucle (écran agent qui clignote). Voir src/lib/useStableGetToken.ts.
+  const getToken = useStableGetToken();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Avant : badge fixe (AGENT_PROFILE.stats.pendingRequests, un nombre en
+  // dur). Compté désormais à partir des vrais RDV EN_ATTENTE/PROPOSE.
+  useEffect(() => {
+    if (!clerkId) return;
+    let active = true;
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const rdvs = await getRdvsByAgent(clerkId, token);
+        if (active) {
+          setPendingCount(rdvs.filter((r) => r.status === 'EN_ATTENTE' || r.status === 'PROPOSE').length);
+        }
+      } catch (err) {
+        console.error('AgentTabLayout: erreur chargement badge demandes', err);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [clerkId, getToken]);
 
   return (
     <Tabs
@@ -40,7 +70,7 @@ export default function AgentTabLayout() {
         name="demandes"
         options={{
           title: 'Demandes',
-          tabBarBadge: AGENT_PROFILE.stats.pendingRequests || undefined,
+          tabBarBadge: pendingCount || undefined,
           tabBarIcon: ({ color }) => (
             <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={color} size={28} />
           ),

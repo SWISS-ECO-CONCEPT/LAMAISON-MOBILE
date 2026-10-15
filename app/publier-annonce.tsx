@@ -1,66 +1,165 @@
 import { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TextInput,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../src/config/theme';
+import { createAnnonce } from '../src/services/annonceService';
+import { uploadImage } from '../src/services/imageService';
+import { PROPERTY_TYPES, type PropertyType } from '../src/data/propertyTypes';
 
-type PropertyType = 'maison' | 'appartement' | 'terrain'| 'chambre' | 'meublé' | 'studio'| 'duplex';
 type TransactionType = 'achat' | 'location';
 
-const PROPERTY_TYPES: { key: PropertyType; label: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
-  { key: 'maison', label: 'Maison', icon: 'home' },
-  { key: 'appartement', label: 'Appartement', icon: 'apartment' },
-  { key: 'terrain', label: 'Terrain', icon: 'landscape' },
-  { key: 'chambre', label: 'Chambre', icon: 'bed' },
-  { key: 'meublé', label: 'Meublé', icon: 'weekend' },
-  { key: 'studio', label: 'Studio', icon: 'meeting-room' },
-  { key: 'duplex', label: 'Duplex', icon: 'layers' },
-];
+const MAX_PHOTOS = 12;
 
-const STEP_LABELS = ['Type de bien', 'Détails', 'Description'];
-
+// Avant : formulaire 100% visuel -- titre/prix/surface/quartier PRÉREMPLIS
+// avec des valeurs fictives ("Villa moderne 4 chambres", "85 000 000"...)
+// qu'un agent pressé aurait pu publier sans même s'en rendre compte, un
+// compteur de photos qui ne référençait aucune vraie image, et un bouton
+// "Publier" qui ne faisait qu'un console.log. Maintenant : champs vides
+// (l'utilisateur saisit ses propres données), vraies photos sélectionnées
+// via expo-image-picker puis uploadées (POST /images), et un vrai
+// POST /annonces/:clerkId à la fin.
 export default function PublierAnnonceScreen() {
   const router = useRouter();
+  const { userId: clerkId, getToken } = useAuth();
   const [step, setStep] = useState(1);
 
   const [propertyType, setPropertyType] = useState<PropertyType>('maison');
   const [transactionType, setTransactionType] = useState<TransactionType>('achat');
-  const [title, setTitle] = useState('Villa moderne 4 chambres');
-  const [price, setPrice] = useState('85 000 000');
-  const [surface, setSurface] = useState('320');
-  const [neighborhood, setNeighborhood] = useState('Bonapriso, Douala');
-  const [bedrooms, setBedrooms] = useState(4);
-  const [bathrooms, setBathrooms] = useState(3);
-  const [photoCount, setPhotoCount] = useState(3);
+  const [title, setTitle] = useState('');
+  const [price, setPrice] = useState('');
+  const [surface, setSurface] = useState('');
+  const [ville, setVille] = useState('');
+  const [quartier, setQuartier] = useState('');
+  const [bedrooms, setBedrooms] = useState(0);
+  const [bathrooms, setBathrooms] = useState(0);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [description, setDescription] = useState('');
+
+  const [errorMessage, setErrorMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [publishedReference, setPublishedReference] = useState<string | null>(null);
 
   const transactionLabel = transactionType === 'achat' ? 'Achat' : 'Location';
   const propertyLabel = PROPERTY_TYPES.find((p) => p.key === propertyType)?.label ?? '';
 
-  const goNext = () => {
-    if (step < 3) {
-      setStep(step + 1);
-    } else {
-      console.log('Publier annonce', {
-        propertyType,
-        transactionType,
-        title,
-        price,
-        surface,
-        neighborhood,
-        bedrooms,
-        bathrooms,
-        photoCount,
-        description,
-      });
-      router.back();
+  const pickPhotos = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setErrorMessage('Autorisez l\'accès à vos photos pour en ajouter.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_PHOTOS - photos.length,
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      setPhotos((prev) => [...prev, ...result.assets.map((a) => a.uri)].slice(0, MAX_PHOTOS));
     }
   };
 
-  const saveDraft = () => {
-    console.log('Enregistrer en brouillon');
-    router.back();
+  const removePhoto = (uri: string) => {
+    setPhotos((prev) => prev.filter((p) => p !== uri));
   };
+
+  const goNext = () => {
+    setErrorMessage('');
+    if (step === 2 && (!title.trim() || !price.trim() || !ville.trim())) {
+      setErrorMessage('Titre, prix et ville sont obligatoires.');
+      return;
+    }
+    if (step < 3) {
+      setStep(step + 1);
+      return;
+    }
+    handlePublish();
+  };
+
+  const handlePublish = async () => {
+    if (!description.trim()) {
+      setErrorMessage('Merci de décrire le bien.');
+      return;
+    }
+    if (photos.length === 0) {
+      setErrorMessage('Ajoutez au moins une photo.');
+      return;
+    }
+    if (!clerkId) {
+      setErrorMessage('Session expirée, reconnectez-vous.');
+      return;
+    }
+
+    setSubmitting(true);
+    setErrorMessage('');
+    try {
+      const token = await getToken();
+      if (!token) {
+        setErrorMessage('Session expirée, reconnectez-vous.');
+        return;
+      }
+
+      // Upload séquentiel -- simple et fiable pour quelques photos ; si l'une
+      // échoue, on arrête plutôt que de publier une annonce avec des photos
+      // manquantes.
+      const uploadedUrls: string[] = [];
+      for (const uri of photos) {
+        const url = await uploadImage(uri, token);
+        uploadedUrls.push(url);
+      }
+
+      const annonce = await createAnnonce(
+        clerkId,
+        {
+          titre: title.trim(),
+          description: description.trim(),
+          prix: Number(price.replace(/\s/g, '')),
+          ville: ville.trim(),
+          quartier: quartier.trim() || undefined,
+          type: propertyType,
+          projet: transactionType,
+          surface: surface.trim() ? Number(surface) : undefined,
+          chambres: bedrooms || undefined,
+          douches: bathrooms || undefined,
+          images: uploadedUrls,
+        },
+        token
+      );
+      setPublishedReference(annonce.bn_reference ?? String(annonce.id));
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Erreur lors de la publication.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (publishedReference) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.successState}>
+          <MaterialIcons name="check-circle" size={56} color={colors.primary} />
+          <Text style={styles.successTitle}>Annonce publiée</Text>
+          <Text style={styles.successText}>Réf. {publishedReference} -- visible dès maintenant dans les recherches.</Text>
+          <Pressable style={styles.continueButtonFull} onPress={() => router.back()}>
+            <Text style={styles.continueButtonText}>Retour</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -71,19 +170,12 @@ export default function PublierAnnonceScreen() {
           </Pressable>
           <View style={styles.headerTitleBox}>
             <Text style={styles.headerTitle}>Nouvelle annonce</Text>
-            <Text style={styles.headerRef}>Réf. attribuée : BN-2431</Text>
           </View>
-          <Pressable onPress={saveDraft}>
-            <Text style={styles.draftLink}>Brouillon</Text>
-          </Pressable>
         </View>
 
         <View style={styles.progressRow}>
           {[1, 2, 3].map((index) => (
-            <View
-              key={index}
-              style={[styles.progressSegment, index <= step && styles.progressSegmentActive]}
-            />
+            <View key={index} style={[styles.progressSegment, index <= step && styles.progressSegmentActive]} />
           ))}
           <Text style={styles.progressLabel}>Étape {step}/3</Text>
         </View>
@@ -102,17 +194,9 @@ export default function PublierAnnonceScreen() {
                     style={[styles.propertyTypeCard, active && styles.propertyTypeCardActive]}
                     onPress={() => setPropertyType(type.key)}>
                     <View style={[styles.propertyTypeIconBox, active && styles.propertyTypeIconBoxActive]}>
-                      <MaterialIcons
-                        name={type.icon}
-                        size={22}
-                        color={active ? colors.white : colors.primary}
-                      />
+                      <MaterialIcons name={type.icon} size={22} color={active ? colors.white : colors.primary} />
                     </View>
-                    <Text
-                      style={[
-                        styles.propertyTypeLabel,
-                        active && styles.propertyTypeLabelActive,
-                      ]}>
+                    <Text style={[styles.propertyTypeLabel, active && styles.propertyTypeLabelActive]}>
                       {type.label}
                     </Text>
                   </Pressable>
@@ -123,30 +207,16 @@ export default function PublierAnnonceScreen() {
             <Text style={[styles.cardLabel, { marginTop: 18 }]}>PROJET</Text>
             <View style={styles.transactionRow}>
               <Pressable
-                style={[
-                  styles.transactionOption,
-                  transactionType === 'achat' && styles.transactionOptionActive,
-                ]}
+                style={[styles.transactionOption, transactionType === 'achat' && styles.transactionOptionActive]}
                 onPress={() => setTransactionType('achat')}>
-                <Text
-                  style={[
-                    styles.transactionOptionText,
-                    transactionType === 'achat' && styles.transactionOptionTextActive,
-                  ]}>
+                <Text style={[styles.transactionOptionText, transactionType === 'achat' && styles.transactionOptionTextActive]}>
                   Achat
                 </Text>
               </Pressable>
               <Pressable
-                style={[
-                  styles.transactionOption,
-                  transactionType === 'location' && styles.transactionOptionActive,
-                ]}
+                style={[styles.transactionOption, transactionType === 'location' && styles.transactionOptionActive]}
                 onPress={() => setTransactionType('location')}>
-                <Text
-                  style={[
-                    styles.transactionOptionText,
-                    transactionType === 'location' && styles.transactionOptionTextActive,
-                  ]}>
+                <Text style={[styles.transactionOptionText, transactionType === 'location' && styles.transactionOptionTextActive]}>
                   Location
                 </Text>
               </Pressable>
@@ -157,69 +227,9 @@ export default function PublierAnnonceScreen() {
         {step === 2 && (
           <>
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>TYPE DE BIEN ET PROJET</Text>
-              <View style={styles.propertyTypeGrid}>
-                {PROPERTY_TYPES.map((type) => {
-                  const active = propertyType === type.key;
-                  return (
-                    <Pressable
-                      key={type.key}
-                      style={[styles.propertyTypeCard, active && styles.propertyTypeCardActive]}
-                      onPress={() => setPropertyType(type.key)}>
-                      <View style={[styles.propertyTypeIconBox, active && styles.propertyTypeIconBoxActive]}>
-                        <MaterialIcons
-                          name={type.icon}
-                          size={22}
-                          color={active ? colors.white : colors.primary}
-                        />
-                      </View>
-                      <Text
-                        style={[
-                          styles.propertyTypeLabel,
-                          active && styles.propertyTypeLabelActive,
-                        ]}>
-                        {type.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <View style={styles.transactionRowCompact}>
-                <Pressable
-                  style={[
-                    styles.transactionOptionCompact,
-                    transactionType === 'achat' && styles.transactionOptionActive,
-                  ]}
-                  onPress={() => setTransactionType('achat')}>
-                  <Text
-                    style={[
-                      styles.transactionOptionText,
-                      transactionType === 'achat' && styles.transactionOptionTextActive,
-                    ]}>
-                    Achat
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.transactionOptionCompact,
-                    transactionType === 'location' && styles.transactionOptionActive,
-                  ]}
-                  onPress={() => setTransactionType('location')}>
-                  <Text
-                    style={[
-                      styles.transactionOptionText,
-                      transactionType === 'location' && styles.transactionOptionTextActive,
-                    ]}>
-                    Location
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.card}>
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>Titre de l'annonce</Text>
-                <TextInput style={styles.input} value={title} onChangeText={setTitle} />
+                <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex. Villa moderne 4 chambres" placeholderTextColor={colors.textLight} />
               </View>
 
               <View style={styles.fieldRow}>
@@ -231,6 +241,8 @@ export default function PublierAnnonceScreen() {
                       value={price}
                       onChangeText={setPrice}
                       keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor={colors.textLight}
                     />
                     <Text style={styles.inputSuffix}>FCFA</Text>
                   </View>
@@ -243,21 +255,27 @@ export default function PublierAnnonceScreen() {
                       value={surface}
                       onChangeText={setSurface}
                       keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor={colors.textLight}
                     />
                     <Text style={styles.inputSuffix}>m²</Text>
                   </View>
                 </View>
               </View>
 
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Quartier et ville</Text>
-                <View style={styles.inputWithIcon}>
-                  <MaterialIcons name="location-on" size={19} color={colors.primary} />
-                  <TextInput
-                    style={styles.inputFlex}
-                    value={neighborhood}
-                    onChangeText={setNeighborhood}
-                  />
+              <View style={styles.fieldRow}>
+                <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Ville</Text>
+                  <View style={styles.inputWithIcon}>
+                    <MaterialIcons name="location-on" size={19} color={colors.primary} />
+                    <TextInput style={styles.inputFlex} value={ville} onChangeText={setVille} placeholder="Douala" placeholderTextColor={colors.textLight} />
+                  </View>
+                </View>
+                <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Quartier</Text>
+                  <View style={styles.inputWithIcon}>
+                    <TextInput style={styles.inputFlex} value={quartier} onChangeText={setQuartier} placeholder="Optionnel" placeholderTextColor={colors.textLight} />
+                  </View>
                 </View>
               </View>
 
@@ -288,24 +306,28 @@ export default function PublierAnnonceScreen() {
             <View style={styles.card}>
               <View style={styles.photosHeader}>
                 <Text style={styles.fieldLabel}>Photos</Text>
-                <Text style={styles.photosCount}>{photoCount} / 12 · min. 4 requises</Text>
+                <Text style={styles.photosCount}>{photos.length} / {MAX_PHOTOS} · min. 1 requise</Text>
               </View>
               <View style={styles.photosRow}>
-                {Array.from({ length: photoCount }).map((_, index) => (
-                  <View key={index} style={styles.photoThumb}>
+                {photos.map((uri, index) => (
+                  <View key={uri} style={styles.photoThumb}>
+                    <Image source={{ uri }} style={styles.photoImage} />
                     {index === 0 && (
                       <View style={styles.photoCoverBadge}>
                         <Text style={styles.photoCoverBadgeText}>COUV.</Text>
                       </View>
                     )}
+                    <Pressable style={styles.photoRemoveButton} onPress={() => removePhoto(uri)}>
+                      <MaterialIcons name="close" size={14} color={colors.white} />
+                    </Pressable>
                   </View>
                 ))}
-                <Pressable
-                  style={styles.addPhotoButton}
-                  onPress={() => setPhotoCount(Math.min(12, photoCount + 1))}>
-                  <MaterialIcons name="add-a-photo" size={22} color={colors.primaryDark} />
-                  <Text style={styles.addPhotoText}>Ajouter</Text>
-                </Pressable>
+                {photos.length < MAX_PHOTOS && (
+                  <Pressable style={styles.addPhotoButton} onPress={pickPhotos}>
+                    <MaterialIcons name="add-a-photo" size={22} color={colors.primaryDark} />
+                    <Text style={styles.addPhotoText}>Ajouter</Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           </>
@@ -329,9 +351,7 @@ export default function PublierAnnonceScreen() {
               <Text style={styles.cardLabel}>RÉCAPITULATIF</Text>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Type</Text>
-                <Text style={styles.summaryValue}>
-                  {propertyLabel} · {transactionLabel}
-                </Text>
+                <Text style={styles.summaryValue}>{propertyLabel} · {transactionLabel}</Text>
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Titre</Text>
@@ -347,29 +367,29 @@ export default function PublierAnnonceScreen() {
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Localisation</Text>
-                <Text style={styles.summaryValue}>{neighborhood || '—'}</Text>
+                <Text style={styles.summaryValue}>{quartier ? `${quartier}, ${ville}` : ville || '—'}</Text>
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Chambres / douches</Text>
-                <Text style={styles.summaryValue}>
-                  {bedrooms} ch. · {bathrooms} douche{bathrooms > 1 ? 's' : ''}
-                </Text>
+                <Text style={styles.summaryValue}>{bedrooms} ch. · {bathrooms} douche{bathrooms > 1 ? 's' : ''}</Text>
               </View>
               <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
                 <Text style={styles.summaryLabel}>Photos</Text>
-                <Text style={styles.summaryValue}>{photoCount}</Text>
+                <Text style={styles.summaryValue}>{photos.length}</Text>
               </View>
             </View>
           </>
         )}
+
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable style={styles.saveButton} onPress={saveDraft}>
-          <Text style={styles.saveButtonText}>Enregistrer</Text>
+        <Pressable style={styles.cancelButton} onPress={() => router.back()} disabled={submitting}>
+          <Text style={styles.cancelButtonText}>Annuler</Text>
         </Pressable>
-        <Pressable style={styles.continueButton} onPress={goNext}>
-          <Text style={styles.continueButtonText}>{step < 3 ? 'Continuer' : 'Publier'}</Text>
+        <Pressable style={[styles.continueButton, submitting && styles.continueButtonDisabled]} onPress={goNext} disabled={submitting}>
+          {submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.continueButtonText}>{step < 3 ? 'Continuer' : 'Publier'}</Text>}
         </Pressable>
       </View>
     </SafeAreaView>
@@ -392,8 +412,6 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerTitleBox: { flex: 1 },
   headerTitle: { fontSize: 17, fontWeight: '800', color: colors.text },
-  headerRef: { fontSize: 12, fontWeight: '700', color: colors.textLight, marginTop: 1 },
-  draftLink: { fontSize: 13, fontWeight: '800', color: colors.primary },
   progressRow: { marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
   progressSegment: { flex: 1, height: 5, borderRadius: 99, backgroundColor: '#E0E4E1' },
   progressSegmentActive: { backgroundColor: colors.primary },
@@ -441,15 +459,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 6,
   },
-  propertyTypeIconBoxActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-  },
+  propertyTypeIconBoxActive: { backgroundColor: 'rgba(255, 255, 255, 0.22)' },
   propertyTypeLabel: { fontSize: 12, fontWeight: '700', color: '#374151', textAlign: 'center' },
   propertyTypeLabelActive: { color: colors.white, fontWeight: '800' },
   transactionRow: { marginTop: 10, flexDirection: 'row', gap: 8, backgroundColor: colors.background, borderRadius: 10, padding: 4 },
-  transactionRowCompact: { marginTop: 9, flexDirection: 'row', gap: 8, backgroundColor: colors.background, borderRadius: 10, padding: 4 },
   transactionOption: { flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
-  transactionOptionCompact: { flex: 1, borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
   transactionOptionActive: { backgroundColor: colors.primary },
   transactionOptionText: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
   transactionOptionTextActive: { color: colors.white, fontWeight: '800' },
@@ -499,21 +513,24 @@ const styles = StyleSheet.create({
   counterPlus: { fontSize: 16, fontWeight: '800', color: colors.primary, paddingHorizontal: 4 },
   photosHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   photosCount: { fontSize: 11, fontWeight: '700', color: colors.textLight },
-  photosRow: { marginTop: 10, flexDirection: 'row', gap: 8 },
-  photoThumb: { width: 66, height: 66, borderRadius: 10, backgroundColor: '#E9EDEA', position: 'relative' },
-  photoCoverBadge: {
-    position: 'absolute',
-    bottom: 4,
-    left: 4,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
+  photosRow: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoThumb: { width: 66, height: 66, borderRadius: 10, backgroundColor: '#E9EDEA', position: 'relative', overflow: 'hidden' },
+  photoImage: { width: '100%', height: '100%' },
+  photoCoverBadge: { position: 'absolute', bottom: 4, left: 4, backgroundColor: colors.primary, paddingHorizontal: 5, paddingVertical: 3, borderRadius: 4 },
   photoCoverBadgeText: { fontSize: 9, fontWeight: '800', color: colors.white },
+  photoRemoveButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 99,
+    backgroundColor: 'rgba(17,24,39,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   addPhotoButton: {
-    flex: 1,
-    minWidth: 66,
+    width: 66,
     height: 66,
     borderRadius: 10,
     backgroundColor: colors.primaryLight,
@@ -544,6 +561,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: { fontSize: 13, color: colors.textMuted },
   summaryValue: { fontSize: 13, fontWeight: '800', color: colors.text, flexShrink: 1, textAlign: 'right' },
+  errorText: { fontSize: 13, fontWeight: '700', color: colors.danger, textAlign: 'center' },
   footer: {
     backgroundColor: colors.white,
     paddingHorizontal: 20,
@@ -557,14 +575,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  saveButton: {
-    flex: 1,
-    backgroundColor: '#F0F2F0',
-    borderRadius: radius.md,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  saveButtonText: { fontSize: 15, fontWeight: '800', color: '#374151' },
+  cancelButton: { flex: 1, backgroundColor: '#F0F2F0', borderRadius: radius.md, paddingVertical: 16, alignItems: 'center' },
+  cancelButtonText: { fontSize: 15, fontWeight: '800', color: '#374151' },
   continueButton: {
     flex: 1.4,
     backgroundColor: colors.primary,
@@ -577,5 +589,17 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
   },
+  continueButtonDisabled: { opacity: 0.7 },
+  continueButtonFull: {
+    marginTop: 8,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+  },
   continueButtonText: { fontSize: 15, fontWeight: '800', color: colors.white },
+  successState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 },
+  successTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
+  successText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
 });

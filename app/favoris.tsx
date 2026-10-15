@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../src/config/theme';
-import { LISTINGS } from '../src/data/listings';
 import ListingCard from '../src/components/ListingCard';
+import { useFavoris } from '../src/context/FavorisContext';
 
 export default function FavorisScreen() {
   const router = useRouter();
-  const favorites = LISTINGS.filter((listing) => listing.favorite);
+  const { favoriteListings, loading } = useFavoris();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -18,16 +18,22 @@ export default function FavorisScreen() {
         <Text style={styles.title}>Mes favoris</Text>
       </View>
 
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-        {favorites.length === 0 ? (
-          <View style={styles.emptyState}>
-            <MaterialIcons name="favorite-border" size={40} color={colors.textLight} />
-            <Text style={styles.emptyText}>Aucune annonce en favoris pour l'instant.</Text>
-          </View>
-        ) : (
-          favorites.map((listing) => <ListingCard key={listing.id} listing={listing} />)
-        )}
-      </ScrollView>
+      {loading ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+          {favoriteListings.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialIcons name="favorite-border" size={40} color={colors.textLight} />
+              <Text style={styles.emptyText}>Aucune annonce en favoris pour l'instant.</Text>
+            </View>
+          ) : (
+            favoriteListings.map((listing) => <ListingCard key={listing.id} listing={listing} />)
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

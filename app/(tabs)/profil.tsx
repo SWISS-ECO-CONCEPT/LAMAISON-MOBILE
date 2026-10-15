@@ -1,34 +1,123 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
-import { CURRENT_USER } from '../../src/data/user';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { useFavoris } from '../../src/context/FavorisContext';
+import { updateUserRole } from '../../src/services/authService';
+import { getRdvsByProspect } from '../../src/services/rdvService';
+import { confirmAction, showError } from '../../src/lib/dialogs';
+import { useStableGetToken } from '../../src/lib/useStableGetToken';
 
 export default function ProfilScreen() {
     const router = useRouter();
-    const { signOut } = useAuth();
-    const [alertsEnabled, setAlertsEnabled] = useState(true);
+    // `userId`/`getToken` viennent de Clerk (identité + preuve d'identité).
+    // `useUser()` donne l'objet Clerk complet — on en a besoin pour appeler
+    // `.reload()` après le changement de rôle (le point le plus important
+    // de ce fichier, voir plus bas).
+    const { signOut, userId } = useAuth();
+    // getToken stable : celui de useAuth() change à chaque rendu et relancerait
+    // l'effet du compteur de RDV en boucle. Voir src/lib/useStableGetToken.ts.
+    const getToken = useStableGetToken();
+    const { user: clerkUser } = useUser();
+    // Renommé en `dbUser` pour ne pas entrer en collision avec `clerkUser` :
+    // deux objets "user" différents, deux sources différentes (Clerk = identité,
+    // AuthContext/BDD = rôle + données métier).
+    const { user: dbUser, updateUser, clearUser } = useAuthContext();
+    const { favoriteIds } = useFavoris();
     const [signingOut, setSigningOut] = useState(false);
+    const [switchingRole, setSwitchingRole] = useState(false);
+    const [appointmentsCount, setAppointmentsCount] = useState(0);
+
+    // Pas de GET /me cote backend pour un compteur tout pret -- on reutilise
+    // le meme endpoint que (tabs)/rendezvous.tsx (GET /rdvs?prospectClerkId=)
+    // plutot que d'inventer un chiffre.
+    useEffect(() => {
+        const clerkId = userId || clerkUser?.id;
+        if (!clerkId) return;
+        let active = true;
+        (async () => {
+            try {
+                const token = await getToken();
+                if (!token) return;
+                const rdvs = await getRdvsByProspect(clerkId, token);
+                if (active) setAppointmentsCount(rdvs.length);
+            } catch (err) {
+                console.error('Erreur lors du chargement du compteur de rendez-vous', err);
+            }
+        })();
+        return () => {
+            active = false;
+        };
+    }, [userId, clerkUser?.id, getToken]);
 
     const handleLogout = async () => {
         setSigningOut(true);
         try {
-            // signOut() invalide la session cote Clerk ET vide le tokenCache
-            // (expo-secure-store) -- sans ca, le jeton reste dans le Keychain/
-            // Keystore de l'appareil et l'app rouvre toujours sur l'accueil,
-            // meme apres un `expo start -c` (qui ne touche que le cache Metro,
-            // jamais le stockage securise de l'OS).
             await signOut();
-            // Filet de securite : useAuth() dans RootLayoutNav et dans
-            // (tabs)/index.tsx redirige deja vers /login des que isSignedIn
-            // passe a false, mais un replace() explicite evite d'attendre
-            // le prochain re-render pour un retour visuel immediat.
+            // Vide le profil BDD local (id, role, phone...) stocké dans
+            // AuthContext + AsyncStorage -- sinon le rôle de l'ancien compte
+            // reste affiché au prochain lancement, avant même un nouveau login.
+            clearUser();
             router.replace('/login');
         } catch (err) {
             console.error('Erreur lors de la deconnexion', err);
             setSigningOut(false);
+        }
+    };
+
+    // Étape 1 : confirmation avant d'agir -- changer de rôle n'est pas un
+    // simple réglage cosmétique qu'on veut pouvoir déclencher par erreur.
+    // Pas de garde sur `dbUser.role` ici : si on est sur cet écran, c'est que
+    // le routage (basé sur Clerk) nous considère particulier. Si la copie
+    // locale dit déjà AGENT, les deux sources ont divergé -- bloquer le clic
+    // rendrait le bouton inerte sans explication ; on relance plutôt la
+    // synchro, l'appel backend est idempotent.
+    const handleSwitchToAgent = () => {
+        if (switchingRole) return;
+        confirmAction('Passer en agent immobilier', 'Vous pourrez publier des annonces et gérer des demandes de rendez-vous.', confirmSwitchToAgent);
+    };
+
+    // Étape 2 : l'appel réel, seulement après confirmation.
+    const confirmSwitchToAgent = async () => {
+        const clerkId = userId || clerkUser?.id;
+        if (!clerkId) {
+      showError('Erreur', 'Session introuvable, reconnecte-toi.');
+      return;
+    }
+
+        setSwitchingRole(true);
+        try {
+            const token = await getToken();
+            if (!token) throw new Error('Session invalide, reconnecte-toi.');
+
+            // C'est CET appel qui fait foi : il met à jour la colonne `role`
+            // en base (source de vérité) ; le backend patch en plus les
+            // métadonnées Clerk de son côté (voir auth.services.ts).
+            const result = await updateUserRole(clerkId, 'AGENT', token);
+            const updated = result?.user ?? result;
+
+            // Indispensable : RootLayoutNav décide de la redirection d'après
+            // `unsafeMetadata.role` de Clerk. Le backend tente de le mettre à
+            // jour, mais sans garantie (clé secrète absente, erreur réseau...).
+            // `unsafeMetadata` est modifiable côté client : on l'écrit nous-mêmes,
+            // ce qui rafraîchit aussi l'objet `clerkUser` en mémoire.
+            await clerkUser?.update({
+                unsafeMetadata: { ...clerkUser.unsafeMetadata, role: updated?.role ?? 'AGENT' },
+            });
+
+            // Mise à jour de la copie locale pour que l'UI change tout de
+            // suite, sans attendre un aller-retour réseau supplémentaire.
+            updateUser({ ...dbUser, role: updated?.role ?? 'AGENT' });
+
+            router.replace('/accueil');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Erreur lors du changement de rôle.';
+            showError('Erreur', message);
+        } finally {
+            setSwitchingRole(false);
         }
     };
 
@@ -39,9 +128,11 @@ export default function ProfilScreen() {
                     <View style={styles.headerTop}>
                         <View style={styles.avatar} />
                         <View style={styles.headerInfo}>
-                            <Text style={styles.name}>{CURRENT_USER.name}</Text>
-                            <Text style={styles.contact}>{CURRENT_USER.phone}</Text>
-                            <Text style={styles.contact}>{CURRENT_USER.email}</Text>
+                            <Text style={styles.name}>{dbUser?.firstname ?? '—'}</Text>
+                            {dbUser?.phone ? <Text style={styles.contact}>{dbUser.phone}</Text> : null}
+                            {clerkUser?.primaryEmailAddress?.emailAddress ? (
+                                <Text style={styles.contact}>{clerkUser.primaryEmailAddress.emailAddress}</Text>
+                            ) : null}
                         </View>
                         <Pressable style={styles.editButton}>
                             <MaterialIcons name="edit" size={20} color={colors.white} />
@@ -50,17 +141,13 @@ export default function ProfilScreen() {
 
                     <View style={styles.statsRow}>
                         <Pressable style={styles.statTile} onPress={() => router.push('/favoris')}>
-                            <Text style={styles.statValue}>{CURRENT_USER.stats.favorites}</Text>
+                            <Text style={styles.statValue}>{favoriteIds.size}</Text>
                             <Text style={styles.statLabel}>favoris</Text>
                         </Pressable>
-                        <View style={styles.statTile}>
-                            <Text style={styles.statValue}>{CURRENT_USER.stats.appointments}</Text>
+                        <Pressable style={styles.statTile} onPress={() => router.push('/rendezvous')}>
+                            <Text style={styles.statValue}>{appointmentsCount}</Text>
                             <Text style={styles.statLabel}>rendez-vous</Text>
-                        </View>
-                        <View style={styles.statTile}>
-                            <Text style={styles.statValue}>{CURRENT_USER.stats.alerts}</Text>
-                            <Text style={styles.statLabel}>alertes</Text>
-                        </View>
+                        </Pressable>
                     </View>
                 </View>
 
@@ -71,12 +158,22 @@ export default function ProfilScreen() {
                             <View style={styles.roleOptionActive}>
                                 <Text style={styles.roleOptionTextActive}>Particulier</Text>
                             </View>
-                            <Pressable style={styles.roleOption} onPress={() => router.push('/accueil')}>
-                                <Text style={styles.roleOptionText}>Agent immobilier</Text>
+                            <Pressable
+                                style={styles.roleOption}
+                                onPress={handleSwitchToAgent}
+                                disabled={switchingRole}>
+                                {switchingRole ? (
+                                    <ActivityIndicator color={colors.textMuted} />
+                                ) : (
+                                    <Text style={styles.roleOptionText}>Agent immobilier</Text>
+                                )}
                             </Pressable>
                         </View>
+                        {/* Texte corrigé : l'ancien disait "nécessite une vérification de
+                            votre carte professionnelle", ce qui était faux -- aucune
+                            vérification n'existe côté backend (rôle auto-déclaré). */}
                         <Text style={styles.roleHint}>
-                            Passer en agent nécessite une vérification de votre carte professionnelle.
+                            Vous pourrez publier des annonces et gérer des rendez-vous.
                         </Text>
                     </View>
 
@@ -86,16 +183,6 @@ export default function ProfilScreen() {
                             <Text style={styles.listRowLabel}>Langue</Text>
                             <Text style={styles.listRowValue}>Français</Text>
                             <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
-                        </View>
-                        <View style={styles.divider} />
-                        <View style={styles.listRow}>
-                            <MaterialIcons name="notifications-active" size={21} color={colors.primary} />
-                            <Text style={styles.listRowLabel}>Alertes nouvelles annonces</Text>
-                            <Pressable
-                                style={[styles.toggle, alertsEnabled && styles.toggleActive]}
-                                onPress={() => setAlertsEnabled(!alertsEnabled)}>
-                                <View style={[styles.toggleKnob, alertsEnabled && styles.toggleKnobActive]} />
-                            </Pressable>
                         </View>
                         <View style={styles.divider} />
                         <View style={styles.listRow}>
@@ -180,17 +267,6 @@ const styles = StyleSheet.create({
     listRowLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.text },
     listRowValue: { fontSize: 14, fontWeight: '800', color: colors.textMuted },
     divider: { height: 1, backgroundColor: '#F0F2F0', marginLeft: 33 },
-    toggle: {
-        width: 46,
-        height: 27,
-        borderRadius: 99,
-        backgroundColor: '#E0E4E1',
-        padding: 3,
-        justifyContent: 'center',
-    },
-    toggleActive: { backgroundColor: colors.primary },
-    toggleKnob: { width: 21, height: 21, borderRadius: 99, backgroundColor: colors.white },
-    toggleKnobActive: { alignSelf: 'flex-end' },
     logoutButton: { backgroundColor: '#FEE2E2', borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
     logoutButtonDisabled: { opacity: 0.6 },
     logoutButtonText: { fontSize: 15, fontWeight: '800', color: '#b91c1c' },

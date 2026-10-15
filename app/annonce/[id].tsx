@@ -7,6 +7,9 @@ import {
   ScrollView,
   Image,
   Modal,
+  ActivityIndicator,
+  Share,
+  Linking,
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -14,17 +17,44 @@ import {
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
-import { getListingById } from '../../src/data/listings';
+import { getAnnonceById } from '../../src/services/annonceService';
+import { mapAnnonceToListing, type Listing } from '../../src/data/listings';
+import { useFavoris } from '../../src/context/FavorisContext';
 
 export default function AnnonceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const listing = getListingById(id);
   const { width, height } = useWindowDimensions();
+  const { isFavorite, toggleFavorite } = useFavoris();
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const galleryRef = useRef<ScrollView>(null);
   const lightboxRef = useRef<ScrollView>(null);
+
+  // Avant : `getListingById(id)` lisait un tableau en mémoire, synchrone.
+  // Maintenant que les annonces viennent de l'API, il faut un vrai appel
+  // réseau -- donc un état de chargement, comme partout ailleurs où on a
+  // branché du réel (login, changement de rôle...).
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    getAnnonceById(id)
+      .then((annonce) => {
+        if (active) setListing(annonce ? mapAnnonceToListing(annonce) : null);
+      })
+      .catch((err) => {
+        console.error('Erreur chargement annonce', err);
+        if (active) setListing(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   useEffect(() => {
     if (lightboxVisible) {
@@ -33,6 +63,14 @@ export default function AnnonceDetailScreen() {
       });
     }
   }, [lightboxVisible]);
+
+  if (loading) {
+    return (
+      <View style={styles.notFound}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!listing) {
     return (
@@ -57,6 +95,40 @@ export default function AnnonceDetailScreen() {
   const goToImage = (index: number) => {
     galleryRef.current?.scrollTo({ x: index * width, animated: true });
     setActiveImage(index);
+  };
+
+  // Pas d'URL web publique pour une annonce (aucun domaine configure
+  // cote app ou backend) -- on partage le lien de deep-link natif
+  // (`scheme` dans app.json) a la place d'inventer une URL qui n'existe
+  // pas. Il n'ouvrira l'annonce que chez quelqu'un qui a deja l'app.
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        title: listing.title,
+        message: `${listing.title} — ${listing.price}${listing.priceSuffix ? ` ${listing.priceSuffix}` : ''}\n${listing.location}\nRéf. ${listing.reference}\n\nlamaisonmobile://annonce/${listing.id}`,
+      });
+    } catch (err) {
+      console.error('Erreur lors du partage de l\'annonce', err);
+    }
+  };
+
+  const handleCall = () => {
+    if (!listing.ownerPhone) return;
+    Linking.openURL(`tel:${listing.ownerPhone}`);
+  };
+
+  const handleChat = () => {
+    router.push({
+      pathname: '/conversation/[id]',
+      params: { id: String(listing.ownerId), name: listing.ownerName, subtitle: listing.ownerRole },
+    });
+  };
+
+  const handleRequestRdv = () => {
+    router.push({
+      pathname: '/demande-rdv/[id]',
+      params: { id: listing.id, listingTitle: listing.title, listingReference: listing.reference },
+    });
   };
 
   return (
@@ -104,14 +176,16 @@ export default function AnnonceDetailScreen() {
           <MaterialIcons name="arrow-back" size={21} color={colors.text} />
         </Pressable>
         <View style={styles.galleryActions}>
-          <Pressable style={styles.galleryActionButton}>
+          <Pressable style={styles.galleryActionButton} onPress={handleShare}>
             <MaterialIcons name="share" size={20} color={colors.text} />
           </Pressable>
-          <Pressable style={styles.galleryActionButton}>
+          <Pressable
+            style={styles.galleryActionButton}
+            onPress={() => toggleFavorite(Number(listing.id))}>
             <MaterialIcons
-              name={listing.favorite ? 'favorite' : 'favorite-border'}
+              name={isFavorite(Number(listing.id)) ? 'favorite' : 'favorite-border'}
               size={20}
-              color={listing.favorite ? colors.primary : colors.text}
+              color={isFavorite(Number(listing.id)) ? colors.primary : colors.text}
             />
           </Pressable>
         </View>
@@ -163,9 +237,11 @@ export default function AnnonceDetailScreen() {
 
         <Text style={styles.title}>{listing.title}</Text>
 
+        {/* `fullAddress` n'existe plus (aucune source backend) --
+            `location` (quartier + ville) est la seule info d'adresse réelle */}
         <View style={styles.addressRow}>
           <MaterialIcons name="location-on" size={17} color={colors.primary} />
-          <Text style={styles.addressText}>{listing.fullAddress}</Text>
+          <Text style={styles.addressText}>{listing.location}</Text>
         </View>
 
         <Text style={styles.price}>
@@ -173,6 +249,8 @@ export default function AnnonceDetailScreen() {
           {listing.priceSuffix ? <Text style={styles.priceSuffix}> {listing.priceSuffix}</Text> : null}
         </Text>
 
+        {/* Grille à 3 tuiles au lieu de 4 : `parkings` retiré, aucun champ
+            équivalent dans le modèle Annonce côté backend */}
         <View style={styles.statsGrid}>
           <View style={styles.statTile}>
             <MaterialIcons name="bed" size={20} color={colors.primary} />
@@ -189,45 +267,36 @@ export default function AnnonceDetailScreen() {
             <Text style={styles.statValue}>{listing.area}</Text>
             <Text style={styles.statLabel}>m²</Text>
           </View>
-          <View style={styles.statTile}>
-            <MaterialIcons name="directions-car" size={20} color={colors.primary} />
-            <Text style={styles.statValue}>{listing.parkings}</Text>
-            <Text style={styles.statLabel}>parkings</Text>
-          </View>
         </View>
 
         <Text style={styles.sectionTitle}>Description</Text>
         <Text style={styles.description}>{listing.description}</Text>
 
+        {/* Carte propriétaire : `ownerName`/`ownerRole` (réels, via
+            `proprietaire.firstname`/`role`) remplacent l'ancien objet
+            `agent` fictif -- pas de badge vérifié ni de note, ça n'existe
+            nulle part dans le modèle User */}
         <View style={styles.agentCard}>
           <View style={styles.agentAvatar} />
           <View style={styles.agentInfo}>
-            <View style={styles.agentNameRow}>
-              <Text style={styles.agentName}>{listing.agent.name}</Text>
-              {listing.agent.verified && (
-                <MaterialIcons name="verified" size={16} color={colors.primary} />
-              )}
-            </View>
-            <Text style={styles.agentRole}>
-              {listing.agent.role} · {listing.agent.rating.toFixed(1)} ★ ({listing.agent.reviewsCount} avis)
-            </Text>
+            <Text style={styles.agentName}>{listing.ownerName}</Text>
+            <Text style={styles.agentRole}>{listing.ownerRole}</Text>
           </View>
-          <Pressable style={styles.agentActionButton}>
+          <Pressable style={styles.agentActionButton} onPress={handleCall}>
             <MaterialIcons name="call" size={20} color={colors.primaryDark} />
           </Pressable>
-          <Pressable style={styles.agentActionButton}>
+          <Pressable style={styles.agentActionButton} onPress={handleChat}>
             <MaterialIcons name="chat-bubble" size={20} color={colors.primaryDark} />
           </Pressable>
         </View>
       </ScrollView>
 
+      {/* Le "prochain créneau" était inventé (`nextSlot`) -- aucun endpoint
+          ne calcule de disponibilité aujourd'hui. Le CTA ouvre maintenant
+          le vrai formulaire de demande (POST /rdvs), sans créneau fictif. */}
       <View style={styles.footer}>
-        <View>
-          <Text style={styles.footerLabel}>{listing.nextSlot.label}</Text>
-          <Text style={styles.footerValue}>{listing.nextSlot.value}</Text>
-        </View>
-        <Pressable style={styles.footerButton}>
-          <Text style={styles.footerButtonText}>Prendre rendez-vous</Text>
+        <Pressable style={styles.footerButton} onPress={handleRequestRdv}>
+          <Text style={styles.footerButtonText}>Demander un rendez-vous</Text>
         </Pressable>
       </View>
     </View>
@@ -505,11 +574,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  agentNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
   agentName: {
     fontSize: 15,
     fontWeight: '800',
@@ -541,17 +605,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowRadius: 10,
     elevation: 4,
-  },
-  footerLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textMuted,
-  },
-  footerValue: {
-    marginTop: 2,
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.text,
   },
   footerButton: {
     flex: 1,

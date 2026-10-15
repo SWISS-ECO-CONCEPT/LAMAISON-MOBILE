@@ -1,17 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../src/config/theme';
 import { PROPERTY_TYPES } from '../../src/data/propertyTypes';
-import { RECENT_SEARCHES, POPULAR_CITIES } from '../../src/data/search';
+import { POPULAR_CITIES } from '../../src/data/search';
+import { getRecentSearches, addRecentSearch } from '../../src/services/searchHistory';
 import SearchBar from '../../src/components/SearchBar';
 
 export default function RechercheScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  const goToResults = (q: string) => {
+  useEffect(() => {
+    getRecentSearches().then(setRecentSearches);
+  }, []);
+
+  const goToResults = async (q: string) => {
+    setRecentSearches(await addRecentSearch(q));
     router.push({ pathname: '/', params: { q } });
   };
 
@@ -29,11 +36,11 @@ export default function RechercheScreen() {
           />
         </View>
 
-        {RECENT_SEARCHES.length > 0 && (
+        {recentSearches.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Recherches récentes</Text>
             <View style={styles.chipWrap}>
-              {RECENT_SEARCHES.map((search) => (
+              {recentSearches.map((search) => (
                 <Pressable key={search} style={styles.recentChip} onPress={() => goToResults(search)}>
                   <MaterialIcons name="history" size={16} color={colors.textMuted} />
                   <Text style={styles.recentChipText}>{search}</Text>
