@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
-import { CURRENT_USER } from '../../src/data/user';
 import { useAuthContext } from '../../src/context/AuthContext';
+import { useFavoris } from '../../src/context/FavorisContext';
 import { updateUserRole } from '../../src/services/authService';
+import { getRdvsByProspect } from '../../src/services/rdvService';
 import { confirmAction, showError } from '../../src/lib/dialogs';
 
 export default function ProfilScreen() {
@@ -21,9 +22,32 @@ export default function ProfilScreen() {
     // deux objets "user" différents, deux sources différentes (Clerk = identité,
     // AuthContext/BDD = rôle + données métier).
     const { user: dbUser, updateUser, clearUser } = useAuthContext();
-    const [alertsEnabled, setAlertsEnabled] = useState(true);
+    const { favoriteIds } = useFavoris();
     const [signingOut, setSigningOut] = useState(false);
     const [switchingRole, setSwitchingRole] = useState(false);
+    const [appointmentsCount, setAppointmentsCount] = useState(0);
+
+    // Pas de GET /me cote backend pour un compteur tout pret -- on reutilise
+    // le meme endpoint que (tabs)/rendezvous.tsx (GET /rdvs?prospectClerkId=)
+    // plutot que d'inventer un chiffre.
+    useEffect(() => {
+        const clerkId = userId || clerkUser?.id;
+        if (!clerkId) return;
+        let active = true;
+        (async () => {
+            try {
+                const token = await getToken();
+                if (!token) return;
+                const rdvs = await getRdvsByProspect(clerkId, token);
+                if (active) setAppointmentsCount(rdvs.length);
+            } catch (err) {
+                console.error('Erreur lors du chargement du compteur de rendez-vous', err);
+            }
+        })();
+        return () => {
+            active = false;
+        };
+    }, [userId, clerkUser?.id, getToken]);
 
     const handleLogout = async () => {
         setSigningOut(true);
@@ -100,9 +124,11 @@ export default function ProfilScreen() {
                     <View style={styles.headerTop}>
                         <View style={styles.avatar} />
                         <View style={styles.headerInfo}>
-                            <Text style={styles.name}>{CURRENT_USER.name}</Text>
-                            <Text style={styles.contact}>{CURRENT_USER.phone}</Text>
-                            <Text style={styles.contact}>{CURRENT_USER.email}</Text>
+                            <Text style={styles.name}>{dbUser?.firstname ?? '—'}</Text>
+                            {dbUser?.phone ? <Text style={styles.contact}>{dbUser.phone}</Text> : null}
+                            {clerkUser?.primaryEmailAddress?.emailAddress ? (
+                                <Text style={styles.contact}>{clerkUser.primaryEmailAddress.emailAddress}</Text>
+                            ) : null}
                         </View>
                         <Pressable style={styles.editButton}>
                             <MaterialIcons name="edit" size={20} color={colors.white} />
@@ -111,17 +137,13 @@ export default function ProfilScreen() {
 
                     <View style={styles.statsRow}>
                         <Pressable style={styles.statTile} onPress={() => router.push('/favoris')}>
-                            <Text style={styles.statValue}>{CURRENT_USER.stats.favorites}</Text>
+                            <Text style={styles.statValue}>{favoriteIds.size}</Text>
                             <Text style={styles.statLabel}>favoris</Text>
                         </Pressable>
-                        <View style={styles.statTile}>
-                            <Text style={styles.statValue}>{CURRENT_USER.stats.appointments}</Text>
+                        <Pressable style={styles.statTile} onPress={() => router.push('/rendezvous')}>
+                            <Text style={styles.statValue}>{appointmentsCount}</Text>
                             <Text style={styles.statLabel}>rendez-vous</Text>
-                        </View>
-                        <View style={styles.statTile}>
-                            <Text style={styles.statValue}>{CURRENT_USER.stats.alerts}</Text>
-                            <Text style={styles.statLabel}>alertes</Text>
-                        </View>
+                        </Pressable>
                     </View>
                 </View>
 
@@ -157,16 +179,6 @@ export default function ProfilScreen() {
                             <Text style={styles.listRowLabel}>Langue</Text>
                             <Text style={styles.listRowValue}>Français</Text>
                             <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
-                        </View>
-                        <View style={styles.divider} />
-                        <View style={styles.listRow}>
-                            <MaterialIcons name="notifications-active" size={21} color={colors.primary} />
-                            <Text style={styles.listRowLabel}>Alertes nouvelles annonces</Text>
-                            <Pressable
-                                style={[styles.toggle, alertsEnabled && styles.toggleActive]}
-                                onPress={() => setAlertsEnabled(!alertsEnabled)}>
-                                <View style={[styles.toggleKnob, alertsEnabled && styles.toggleKnobActive]} />
-                            </Pressable>
                         </View>
                         <View style={styles.divider} />
                         <View style={styles.listRow}>
@@ -251,17 +263,6 @@ const styles = StyleSheet.create({
     listRowLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.text },
     listRowValue: { fontSize: 14, fontWeight: '800', color: colors.textMuted },
     divider: { height: 1, backgroundColor: '#F0F2F0', marginLeft: 33 },
-    toggle: {
-        width: 46,
-        height: 27,
-        borderRadius: 99,
-        backgroundColor: '#E0E4E1',
-        padding: 3,
-        justifyContent: 'center',
-    },
-    toggleActive: { backgroundColor: colors.primary },
-    toggleKnob: { width: 21, height: 21, borderRadius: 99, backgroundColor: colors.white },
-    toggleKnobActive: { alignSelf: 'flex-end' },
     logoutButton: { backgroundColor: '#FEE2E2', borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
     logoutButtonDisabled: { opacity: 0.6 },
     logoutButtonText: { fontSize: 15, fontWeight: '800', color: '#b91c1c' },
