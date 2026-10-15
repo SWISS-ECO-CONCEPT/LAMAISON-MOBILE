@@ -94,3 +94,64 @@ export async function getAnnonceById(id: string | number): Promise<AnnonceApi | 
   }
   return json?.data ?? null;
 }
+
+// GET /annonces/user/:clerkId ne demande pas de token (voir annonce.routes.ts) --
+// même route publique que GET /annonces, juste filtrée par propriétaire.
+export async function getAnnoncesByUser(clerkId: string): Promise<AnnonceApi[]> {
+  const response = await fetch(`${API_BASE}/annonces/user/${clerkId}`);
+  if (!response.ok) {
+    throw new Error(`Erreur lors du chargement de vos annonces (${response.status})`);
+  }
+  const json = await response.json();
+  if (json?.success !== true) {
+    throw new Error(json?.error?.message ?? json?.message ?? 'Réponse invalide du serveur');
+  }
+  return json?.data ?? [];
+}
+
+export type CreateAnnoncePayload = {
+  titre: string;
+  description: string;
+  prix: number;
+  ville: string;
+  quartier?: string;
+  type?: string;
+  projet: 'achat' | 'location';
+  surface?: number;
+  chambres?: number;
+  douches?: number;
+  images: string[];
+  negotiable?: boolean;
+};
+
+// POST /annonces/:clerkId exige requireAuth() et que clerkId == l'appelant
+// (voir createAnnonce dans annonce.controller.ts) -- proprietaireId n'est
+// PAS envoyé, le backend le déduit du clerkId dans l'URL.
+export async function createAnnonce(
+  clerkId: string,
+  payload: CreateAnnoncePayload,
+  token: string
+): Promise<AnnonceApi> {
+  const response = await fetch(`${API_BASE}/annonces/${clerkId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Erreur lors de la publication de l'annonce (${response.status})`;
+    try {
+      const errJson = await response.json();
+      errorMsg = errJson?.error?.message ?? errJson?.message ?? errorMsg;
+    } catch {
+      /* fallback */
+    }
+    throw new Error(errorMsg);
+  }
+
+  const json = await response.json();
+  if (json?.success !== true) {
+    throw new Error(json?.error?.message ?? json?.message ?? 'Réponse invalide du serveur');
+  }
+  return json?.data;
+}
