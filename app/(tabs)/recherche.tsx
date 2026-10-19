@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../src/config/theme';
 import { PROPERTY_TYPES } from '../../src/data/propertyTypes';
@@ -10,6 +11,7 @@ import SearchBar from '../../src/components/SearchBar';
 
 export default function RechercheScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
@@ -25,20 +27,20 @@ export default function RechercheScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Recherche</Text>
+        <Text style={styles.title}>{t('searchScreen.title')}</Text>
 
         <View style={styles.searchWrap}>
           <SearchBar
             value={query}
             onChangeText={setQuery}
-            placeholder="Quartier, ville, référence…"
+            placeholder={t('searchScreen.placeholder')}
             onSubmit={() => goToResults(query)}
           />
         </View>
 
         {recentSearches.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recherches récentes</Text>
+            <Text style={styles.sectionTitle}>{t('searchScreen.recent')}</Text>
             <View style={styles.chipWrap}>
               {recentSearches.map((search) => (
                 <Pressable key={search} style={styles.recentChip} onPress={() => goToResults(search)}>
@@ -51,24 +53,28 @@ export default function RechercheScreen() {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Catégories</Text>
+          <Text style={styles.sectionTitle}>{t('searchScreen.categories')}</Text>
           <View style={styles.categoryGrid}>
             {PROPERTY_TYPES.map((type) => (
               <Pressable
                 key={type.key}
                 style={styles.categoryCard}
-                onPress={() => goToResults(type.label)}>
+                // La CLÉ (ex. "maison") sert de texte de recherche, pas le libellé
+                // traduit : les titres d'annonces sont en français, "House" ne
+                // trouverait rien. La recherche ignorant la casse, le résultat est
+                // identique à l'ancien libellé "Maison".
+                onPress={() => goToResults(type.key)}>
                 <View style={styles.categoryIconBox}>
                   <MaterialIcons name={type.icon} size={22} color={colors.primary} />
                 </View>
-                <Text style={styles.categoryLabel}>{type.label}</Text>
+                <Text style={styles.categoryLabel}>{t(`propertyTypes.${type.key}`)}</Text>
               </Pressable>
             ))}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Villes populaires</Text>
+          <Text style={styles.sectionTitle}>{t('searchScreen.popularCities')}</Text>
           <View style={styles.chipWrap}>
             {POPULAR_CITIES.map((city) => (
               <Pressable key={city} style={styles.cityChip} onPress={() => goToResults(city)}>

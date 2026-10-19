@@ -15,15 +15,17 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { getAnnonceById } from '../../src/services/annonceService';
-import { mapAnnonceToListing, type Listing } from '../../src/data/listings';
+import { formatPublishedAgo, mapAnnonceToListing, type Listing } from '../../src/data/listings';
 import { useFavoris } from '../../src/context/FavorisContext';
 
 export default function AnnonceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const { isFavorite, toggleFavorite } = useFavoris();
   const [listing, setListing] = useState<Listing | null>(null);
@@ -75,10 +77,10 @@ export default function AnnonceDetailScreen() {
   if (!listing) {
     return (
       <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Annonce introuvable.</Text>
+        <Text style={styles.notFoundText}>{t('listing.notFound')}</Text>
         <Link href="/" asChild>
           <Pressable>
-            <Text style={styles.notFoundLink}>Retour à l'accueil</Text>
+            <Text style={styles.notFoundLink}>{t('listing.backHome')}</Text>
           </Pressable>
         </Link>
       </View>
@@ -86,6 +88,10 @@ export default function AnnonceDetailScreen() {
   }
 
   const isLocation = listing.type === 'LOCATION';
+  const priceSuffix = isLocation ? t('listing.perMonth') : null;
+  const ownerName = listing.ownerName ?? t('common.owner');
+  const ownerRole = listing.ownerIsAgent ? t('common.roleAgent') : t('common.roleProspect');
+  const referenceLabel = t('listing.reference', { reference: listing.reference });
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
@@ -105,7 +111,7 @@ export default function AnnonceDetailScreen() {
     try {
       await Share.share({
         title: listing.title,
-        message: `${listing.title} — ${listing.price}${listing.priceSuffix ? ` ${listing.priceSuffix}` : ''}\n${listing.location}\nRéf. ${listing.reference}\n\nlamaisonmobile://annonce/${listing.id}`,
+        message: `${listing.title} — ${listing.price}${priceSuffix ? ` ${priceSuffix}` : ''}\n${listing.location}\n${referenceLabel}\n\nlamaisonmobile://annonce/${listing.id}`,
       });
     } catch (err) {
       console.error('Erreur lors du partage de l\'annonce', err);
@@ -120,7 +126,7 @@ export default function AnnonceDetailScreen() {
   const handleChat = () => {
     router.push({
       pathname: '/conversation/[id]',
-      params: { id: String(listing.ownerId), name: listing.ownerName, subtitle: listing.ownerRole },
+      params: { id: String(listing.ownerId), name: ownerName, subtitle: ownerRole },
     });
   };
 
@@ -227,11 +233,11 @@ export default function AnnonceDetailScreen() {
         <View style={styles.badgeRow}>
           <View style={[styles.typeBadge, isLocation && styles.typeBadgeLocation]}>
             <Text style={[styles.typeBadgeText, isLocation && styles.typeBadgeTextLocation]}>
-              {listing.type}
+              {isLocation ? t('listing.rent') : t('listing.sale')}
             </Text>
           </View>
           <Text style={styles.metaText}>
-            Réf. {listing.reference} · {listing.publishedAgo}
+            {referenceLabel} · {formatPublishedAgo(listing.createdAt)}
           </Text>
         </View>
 
@@ -246,7 +252,7 @@ export default function AnnonceDetailScreen() {
 
         <Text style={styles.price}>
           {listing.price}
-          {listing.priceSuffix ? <Text style={styles.priceSuffix}> {listing.priceSuffix}</Text> : null}
+          {priceSuffix ? <Text style={styles.priceSuffix}> {priceSuffix}</Text> : null}
         </Text>
 
         {/* Grille à 3 tuiles au lieu de 4 : `parkings` retiré, aucun champ
@@ -255,21 +261,21 @@ export default function AnnonceDetailScreen() {
           <View style={styles.statTile}>
             <MaterialIcons name="bed" size={20} color={colors.primary} />
             <Text style={styles.statValue}>{listing.beds}</Text>
-            <Text style={styles.statLabel}>chambres</Text>
+            <Text style={styles.statLabel}>{t('listing.bedrooms')}</Text>
           </View>
           <View style={styles.statTile}>
             <MaterialIcons name="shower" size={20} color={colors.primary} />
             <Text style={styles.statValue}>{listing.showers}</Text>
-            <Text style={styles.statLabel}>douches</Text>
+            <Text style={styles.statLabel}>{t('listing.showersLabel')}</Text>
           </View>
           <View style={styles.statTile}>
             <MaterialIcons name="square-foot" size={20} color={colors.primary} />
             <Text style={styles.statValue}>{listing.area}</Text>
-            <Text style={styles.statLabel}>m²</Text>
+            <Text style={styles.statLabel}>{t('listing.areaUnit')}</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Description</Text>
+        <Text style={styles.sectionTitle}>{t('listing.description')}</Text>
         <Text style={styles.description}>{listing.description}</Text>
 
         {/* Carte propriétaire : `ownerName`/`ownerRole` (réels, via
@@ -279,8 +285,8 @@ export default function AnnonceDetailScreen() {
         <View style={styles.agentCard}>
           <View style={styles.agentAvatar} />
           <View style={styles.agentInfo}>
-            <Text style={styles.agentName}>{listing.ownerName}</Text>
-            <Text style={styles.agentRole}>{listing.ownerRole}</Text>
+            <Text style={styles.agentName}>{ownerName}</Text>
+            <Text style={styles.agentRole}>{ownerRole}</Text>
           </View>
           <Pressable style={styles.agentActionButton} onPress={handleCall}>
             <MaterialIcons name="call" size={20} color={colors.primaryDark} />
@@ -296,7 +302,7 @@ export default function AnnonceDetailScreen() {
           le vrai formulaire de demande (POST /rdvs), sans créneau fictif. */}
       <View style={styles.footer}>
         <Pressable style={styles.footerButton} onPress={handleRequestRdv}>
-          <Text style={styles.footerButtonText}>Demander un rendez-vous</Text>
+          <Text style={styles.footerButtonText}>{t('listing.requestVisit')}</Text>
         </Pressable>
       </View>
     </View>

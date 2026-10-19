@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useStableGetToken } from '../../src/lib/useStableGetToken';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
@@ -11,6 +12,7 @@ import { formatRelativeTime } from '../../src/utils/time';
 // n'a ni statut de lecture ni présence -- l'ancien mock les inventait.
 export default function MessagesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const getToken = useStableGetToken();
   const [conversations, setConversations] = useState<ConversationSummaryApi[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,28 +23,28 @@ export default function MessagesScreen() {
     setError(null);
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) throw new Error(t('common.sessionExpired'));
       const data = await getUserConversations(token);
       setConversations(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des conversations.');
+      setError(err instanceof Error ? err.message : t('messages.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [getToken]);
+  }, [getToken, t]);
 
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
 
   const roleLabel = (role: ConversationSummaryApi['otherUser']['role']) =>
-    role === 'AGENT' ? 'Agent LAMAISON' : 'Particulier';
+    role === 'AGENT' ? t('common.roleAgent') : t('common.roleProspect');
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.title}>Messages</Text>
+          <Text style={styles.title}>{t('messages.title')}</Text>
         </View>
       </View>
 
@@ -54,13 +56,13 @@ export default function MessagesScreen() {
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={loadConversations}>
-            <Text style={styles.retryText}>Réessayer</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
           {conversations.length === 0 ? (
-            <Text style={styles.emptyText}>Aucune conversation pour l'instant.</Text>
+            <Text style={styles.emptyText}>{t('messages.empty')}</Text>
           ) : (
             conversations.map((conversation) => (
               <Pressable

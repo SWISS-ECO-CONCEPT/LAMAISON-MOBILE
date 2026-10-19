@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../src/config/theme';
 
@@ -23,6 +24,7 @@ type FiltersParams = {
 // rien n'est inventé.
 export default function FiltresScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<FiltersParams>();
 
   const [prixMin, setPrixMin] = useState(params.prixMin ?? '');
@@ -67,18 +69,18 @@ export default function FiltresScreen() {
         <Pressable onPress={() => router.back()}>
           <MaterialIcons name="close" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Filtres avancés</Text>
+        <Text style={styles.headerTitle}>{t('filters.title')}</Text>
         <Pressable onPress={reset}>
-          <Text style={styles.resetLink}>Réinitialiser</Text>
+          <Text style={styles.resetLink}>{t('filters.reset')}</Text>
         </Pressable>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>PRIX (FCFA)</Text>
+          <Text style={styles.cardLabel}>{t('filters.price')}</Text>
           <View style={styles.fieldRow}>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Min</Text>
+              <Text style={styles.fieldLabel}>{t('common.min')}</Text>
               <TextInput
                 style={styles.input}
                 value={prixMin}
@@ -89,13 +91,13 @@ export default function FiltresScreen() {
               />
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Max</Text>
+              <Text style={styles.fieldLabel}>{t('common.max')}</Text>
               <TextInput
                 style={styles.input}
                 value={prixMax}
                 onChangeText={setPrixMax}
                 keyboardType="numeric"
-                placeholder="Illimité"
+                placeholder={t('common.unlimited')}
                 placeholderTextColor={colors.textLight}
               />
             </View>
@@ -103,10 +105,10 @@ export default function FiltresScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>SURFACE (M²)</Text>
+          <Text style={styles.cardLabel}>{t('filters.area')}</Text>
           <View style={styles.fieldRow}>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Min</Text>
+              <Text style={styles.fieldLabel}>{t('common.min')}</Text>
               <TextInput
                 style={styles.input}
                 value={surfaceMin}
@@ -117,13 +119,13 @@ export default function FiltresScreen() {
               />
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Max</Text>
+              <Text style={styles.fieldLabel}>{t('common.max')}</Text>
               <TextInput
                 style={styles.input}
                 value={surfaceMax}
                 onChangeText={setSurfaceMax}
                 keyboardType="numeric"
-                placeholder="Illimité"
+                placeholder={t('common.unlimited')}
                 placeholderTextColor={colors.textLight}
               />
             </View>
@@ -131,31 +133,31 @@ export default function FiltresScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>LOCALISATION</Text>
+          <Text style={styles.cardLabel}>{t('filters.location')}</Text>
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Ville</Text>
+            <Text style={styles.fieldLabel}>{t('filters.city')}</Text>
             <TextInput
               style={styles.input}
               value={ville}
               onChangeText={setVille}
-              placeholder="Ex. Douala"
+              placeholder={t('filters.cityPlaceholder')}
               placeholderTextColor={colors.textLight}
             />
           </View>
           <View style={[styles.field, { marginTop: 10 }]}>
-            <Text style={styles.fieldLabel}>Quartier</Text>
+            <Text style={styles.fieldLabel}>{t('filters.district')}</Text>
             <TextInput
               style={styles.input}
               value={quartier}
               onChangeText={setQuartier}
-              placeholder="Ex. Bonapriso"
+              placeholder={t('filters.districtPlaceholder')}
               placeholderTextColor={colors.textLight}
             />
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>MINIMUM REQUIS</Text>
+          <Text style={styles.cardLabel}>{t('filters.minimum')}</Text>
           <View style={styles.fieldRow}>
             <View style={[styles.counterBox, { flex: 1 }]}>
               <MaterialIcons name="bed" size={18} color={colors.primary} />
@@ -183,7 +185,7 @@ export default function FiltresScreen() {
 
       <View style={styles.footer}>
         <Pressable style={styles.applyButton} onPress={apply}>
-          <Text style={styles.applyButtonText}>Appliquer les filtres</Text>
+          <Text style={styles.applyButtonText}>{t('filters.apply')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

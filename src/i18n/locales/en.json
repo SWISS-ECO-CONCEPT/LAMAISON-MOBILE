@@ -4,13 +4,24 @@
     "confirm": "Confirm",
     "error": "Error",
     "sessionNotFound": "Session not found, please sign in again.",
-    "sessionInvalid": "Invalid session, please sign in again."
+    "sessionInvalid": "Invalid session, please sign in again.",
+    "retry": "Retry",
+    "sessionExpired": "Session expired, please sign in again.",
+    "search": "Search…",
+    "min": "Min",
+    "max": "Max",
+    "unlimited": "No limit",
+    "roleAgent": "LAMAISON agent",
+    "roleProspect": "Individual",
+    "owner": "Owner"
   },
   "profile": {
     "favorites": "favorites",
     "appointments": "appointments",
     "agentBadge": "LAMAISON agent",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "security": "Security and privacy",
+    "help": "Help and contact"
   },
   "role": {
     "sectionTitle": "MY ROLE",
@@ -28,5 +39,145 @@
   },
   "preferences": {
     "language": "Language"
+  },
+  "tabs": {
+    "home": "Home",
+    "search": "Search",
+    "appointments": "Visits",
+    "messages": "Messages",
+    "profile": "Profile"
+  },
+  "time": {
+    "yesterday": "Yesterday",
+    "todayUpper": "TODAY",
+    "yesterdayUpper": "YESTERDAY",
+    "dateAtTime": "{{date}} at {{time}}"
+  },
+  "listing": {
+    "rent": "RENT",
+    "sale": "SALE",
+    "perMonth": "/month",
+    "reference": "Ref. {{reference}}",
+    "publishedToday": "posted today",
+    "publishedYesterday": "posted yesterday",
+    "publishedDaysAgo": "posted {{count}} days ago",
+    "bedsShort": "{{count}} bd.",
+    "showers_one": "{{count}} shower",
+    "showers_other": "{{count}} showers",
+    "area": "{{area}} m²",
+    "bedrooms": "bedrooms",
+    "showersLabel": "showers",
+    "areaUnit": "m²",
+    "description": "Description",
+    "requestVisit": "Request a visit",
+    "notFound": "Listing not found.",
+    "backHome": "Back to home"
+  },
+  "propertyTypes": {
+    "maison": "House",
+    "appartement": "Apartment",
+    "terrain": "Land",
+    "chambre": "Room",
+    "meublé": "Furnished",
+    "studio": "Studio",
+    "duplex": "Duplex"
+  },
+  "home": {
+    "greeting": "Hello",
+    "greetingName": "Hello {{name}}",
+    "searchPlaceholder": "District, city, property type…",
+    "rent": "Rent",
+    "sale": "Buy",
+    "house": "House",
+    "apartmentShort": "Apt.",
+    "listingsCount_one": "{{count}} listing near you",
+    "listingsCount_other": "{{count}} listings near you",
+    "map": "Map",
+    "empty": "No listing matches your search.",
+    "loadError": "Could not load listings."
+  },
+  "searchScreen": {
+    "title": "Search",
+    "placeholder": "District, city, reference…",
+    "recent": "Recent searches",
+    "categories": "Categories",
+    "popularCities": "Popular cities"
+  },
+  "filters": {
+    "title": "Advanced filters",
+    "reset": "Reset",
+    "price": "PRICE (FCFA)",
+    "area": "AREA (M²)",
+    "location": "LOCATION",
+    "city": "City",
+    "district": "District",
+    "cityPlaceholder": "e.g. Douala",
+    "districtPlaceholder": "e.g. Bonapriso",
+    "minimum": "MINIMUM REQUIRED",
+    "apply": "Apply filters"
+  },
+  "appointments": {
+    "title": "My visits",
+    "filterAll": "All",
+    "filterPending": "Pending",
+    "filterAccepted": "Accepted",
+    "empty": "No visits yet.",
+    "loadError": "Could not load your visits.",
+    "actionFailed": "Action failed",
+    "actionError": "Could not update the visit.",
+    "proposedBanner": "NEW TIME SLOT PROPOSED BY THE AGENT",
+    "youRequested": "YOU REQUESTED",
+    "agentProposes": "THE AGENT PROPOSES",
+    "seeAgentMessage": "See the agent's message in your inbox",
+    "accept": "Accept",
+    "decline": "Decline",
+    "contactAgent": "Contact the agent",
+    "cancelling": "Cancelling…",
+    "cancelRequest": "Cancel my request",
+    "status": {
+      "ACCEPTE": "ACCEPTED",
+      "REFUSE": "DECLINED",
+      "ANNULE": "CANCELLED",
+      "EN_ATTENTE": "PENDING"
+    }
+  },
+  "messages": {
+    "title": "Messages",
+    "empty": "No conversations yet.",
+    "loadError": "Could not load conversations."
+  },
+  "conversation": {
+    "fallbackTitle": "Conversation",
+    "empty": "No messages yet -- write the first one.",
+    "placeholder": "Write a message…",
+    "loadError": "Could not load the conversation.",
+    "sendError": "Your message could not be sent."
+  },
+  "favorites": {
+    "title": "My favorites",
+    "empty": "No favorite listings yet."
+  },
+  "visitRequest": {
+    "title": "Request a visit",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "phone": "Phone",
+    "date": "Preferred date",
+    "datePlaceholder": "DD/MM/YYYY",
+    "time": "Time",
+    "timePlaceholder": "HH:MM",
+    "message": "Message",
+    "messagePlaceholder": "Your message to the owner…",
+    "defaultMessage": "Hello, I would like to visit \"{{title}}\".",
+    "defaultMessageWithRef": "Hello, I would like to visit \"{{title}}\" (Ref. {{reference}}).",
+    "missingFields": "Please fill in all fields.",
+    "invalidDate": "Invalid date or time -- use DD/MM/YYYY and HH:MM, in the future.",
+    "submitError": "Could not send your visit request.",
+    "submit": "Send request",
+    "successTitle": "Request sent",
+    "successText": "The owner has received your visit request and will reply through your inbox.",
+    "backToListing": "Back to listing"
   }
 }

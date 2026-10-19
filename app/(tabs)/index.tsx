@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { mapAnnonceToListing, type Listing } from '../../src/data/listings';
@@ -10,15 +11,17 @@ import { useAuthContext } from '../../src/context/AuthContext';
 import ListingCard from '../../src/components/ListingCard';
 import SearchBar from '../../src/components/SearchBar';
 
+// `key` = valeur envoyée au backend (filtres `projet` / `type`), `labelKey` =
+// texte affiché, traduit.
 const TRANSACTION_FILTERS = [
-  { key: 'location', label: 'Location' },
-  { key: 'achat', label: 'Achat' },
-];
+  { key: 'location', labelKey: 'home.rent' },
+  { key: 'achat', labelKey: 'home.sale' },
+] as const;
 
 const CATEGORY_FILTERS = [
-  { key: 'maison', label: 'Maison', icon: 'home' as const },
-  { key: 'appartement', label: 'Appart', icon: 'apartment' as const },
-];
+  { key: 'maison', labelKey: 'home.house', icon: 'home' },
+  { key: 'appartement', labelKey: 'home.apartmentShort', icon: 'apartment' },
+] as const;
 
 export default function HomeScreen() {
   // `(tabs)/index.tsx` est le SEUL fichier de app/ nomme "index" -> c'est lui
@@ -30,6 +33,7 @@ export default function HomeScreen() {
   // visible de cet ecran avant la redirection). Reintegree apres avoir
   // disparu sur cette branche -- voir la revue du 15/10.
   const { isLoaded, isSignedIn } = useAuth();
+  const { t } = useTranslation();
   const { user: dbUser } = useAuthContext();
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -114,11 +118,11 @@ export default function HomeScreen() {
       });
       setListings(annonces.map(mapAnnonceToListing));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des annonces.');
+      setError(err instanceof Error ? err.message : t('home.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [activeTransaction, activeCategory, filters]);
+  }, [activeTransaction, activeCategory, filters, t]);
 
   useEffect(() => {
     loadListings();
@@ -148,12 +152,9 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.greeting}>Bonjour{dbUser?.firstname ? ` ${dbUser.firstname}` : ''} 👋</Text>
-            <Pressable style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={18} color={colors.primary} />
-              <Text style={styles.locationText}>Douala</Text>
-              <MaterialIcons name="expand-more" size={19} color={colors.textMuted} />
-            </Pressable>
+            <Text style={styles.greeting}>
+              {dbUser?.firstname ? t('home.greetingName', { name: dbUser.firstname }) : t('home.greeting')} 👋
+            </Text>
           </View>
           <Pressable style={styles.notifButton}>
             <MaterialIcons name="notifications" size={22} color={colors.text} />
@@ -165,7 +166,7 @@ export default function HomeScreen() {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Quartier, ville, type de bien…"
+            placeholder={t('home.searchPlaceholder')}
             onFilterPress={() => router.push({ pathname: '/filtres', params: filters })}
             filtersActive={Object.values(filters).some(Boolean)}
           />
@@ -178,8 +179,8 @@ export default function HomeScreen() {
               <Pressable
                 key={filter.key}
                 style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setActiveTransaction(filter.key as 'location' | 'achat')}>
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{filter.label}</Text>
+                onPress={() => setActiveTransaction(filter.key)}>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(filter.labelKey)}</Text>
               </Pressable>
             );
           })}
@@ -194,7 +195,7 @@ export default function HomeScreen() {
                 // il n'y a pas de chip "Tous" séparée, donc il faut bien pouvoir revenir en arrière.
                 onPress={() => setActiveCategory(active ? null : category.key)}>
                 <MaterialIcons name={category.icon} size={16} color={active ? colors.white : colors.text} />
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{category.label}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(category.labelKey)}</Text>
               </Pressable>
             );
           })}
@@ -209,20 +210,18 @@ export default function HomeScreen() {
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={loadListings}>
-            <Text style={styles.retryText}>Réessayer</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
           <View style={styles.listHeader}>
-            <Text style={styles.listCount}>
-              {filteredListings.length} annonce{filteredListings.length > 1 ? 's' : ''} autour de vous
-            </Text>
-            <Text style={styles.listMapLink}>Carte</Text>
+            <Text style={styles.listCount}>{t('home.listingsCount', { count: filteredListings.length })}</Text>
+            <Text style={styles.listMapLink}>{t('home.map')}</Text>
           </View>
 
           {filteredListings.length === 0 ? (
-            <Text style={styles.emptyText}>Aucune annonce ne correspond à votre recherche.</Text>
+            <Text style={styles.emptyText}>{t('home.empty')}</Text>
           ) : (
             filteredListings.map((listing) => <ListingCard key={listing.id} listing={listing} />)
           )}
@@ -247,8 +246,6 @@ const styles = StyleSheet.create({
   },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   greeting: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-  locationRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  locationText: { fontSize: 17, fontWeight: '800', color: colors.text },
   notifButton: {
     width: 42,
     height: 42,

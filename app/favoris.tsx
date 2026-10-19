@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../src/config/theme';
 import ListingCard from '../src/components/ListingCard';
@@ -7,6 +8,7 @@ import { useFavoris } from '../src/context/FavorisContext';
 
 export default function FavorisScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { favoriteListings, loading } = useFavoris();
 
   return (
@@ -15,7 +17,7 @@ export default function FavorisScreen() {
         <Pressable onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Mes favoris</Text>
+        <Text style={styles.title}>{t('favorites.title')}</Text>
       </View>
 
       {loading ? (
@@ -27,7 +29,7 @@ export default function FavorisScreen() {
           {favoriteListings.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialIcons name="favorite-border" size={40} color={colors.textLight} />
-              <Text style={styles.emptyText}>Aucune annonce en favoris pour l'instant.</Text>
+              <Text style={styles.emptyText}>{t('favorites.empty')}</Text>
             </View>
           ) : (
             favoriteListings.map((listing) => <ListingCard key={listing.id} listing={listing} />)

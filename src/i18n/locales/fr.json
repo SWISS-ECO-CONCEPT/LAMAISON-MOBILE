@@ -4,13 +4,24 @@
     "confirm": "Confirmer",
     "error": "Erreur",
     "sessionNotFound": "Session introuvable, reconnecte-toi.",
-    "sessionInvalid": "Session invalide, reconnecte-toi."
+    "sessionInvalid": "Session invalide, reconnecte-toi.",
+    "retry": "Réessayer",
+    "sessionExpired": "Session expirée, reconnecte-toi.",
+    "search": "Rechercher…",
+    "min": "Min",
+    "max": "Max",
+    "unlimited": "Illimité",
+    "roleAgent": "Agent LAMAISON",
+    "roleProspect": "Particulier",
+    "owner": "Propriétaire"
   },
   "profile": {
     "favorites": "favoris",
     "appointments": "rendez-vous",
     "agentBadge": "Agent LAMAISON",
-    "logout": "Se déconnecter"
+    "logout": "Se déconnecter",
+    "security": "Sécurité et confidentialité",
+    "help": "Aide et contact"
   },
   "role": {
     "sectionTitle": "MON RÔLE",
@@ -28,5 +39,145 @@
   },
   "preferences": {
     "language": "Langue"
+  },
+  "tabs": {
+    "home": "Accueil",
+    "search": "Recherche",
+    "appointments": "RDV",
+    "messages": "Messages",
+    "profile": "Profil"
+  },
+  "time": {
+    "yesterday": "Hier",
+    "todayUpper": "AUJOURD'HUI",
+    "yesterdayUpper": "HIER",
+    "dateAtTime": "{{date}} à {{time}}"
+  },
+  "listing": {
+    "rent": "LOCATION",
+    "sale": "ACHAT",
+    "perMonth": "/mois",
+    "reference": "Réf. {{reference}}",
+    "publishedToday": "publiée aujourd’hui",
+    "publishedYesterday": "publiée hier",
+    "publishedDaysAgo": "publiée il y a {{count}} jours",
+    "bedsShort": "{{count}} ch.",
+    "showers_one": "{{count}} douche",
+    "showers_other": "{{count}} douches",
+    "area": "{{area}} m²",
+    "bedrooms": "chambres",
+    "showersLabel": "douches",
+    "areaUnit": "m²",
+    "description": "Description",
+    "requestVisit": "Demander un rendez-vous",
+    "notFound": "Annonce introuvable.",
+    "backHome": "Retour à l'accueil"
+  },
+  "propertyTypes": {
+    "maison": "Maison",
+    "appartement": "Appartement",
+    "terrain": "Terrain",
+    "chambre": "Chambre",
+    "meublé": "Meublé",
+    "studio": "Studio",
+    "duplex": "Duplex"
+  },
+  "home": {
+    "greeting": "Bonjour",
+    "greetingName": "Bonjour {{name}}",
+    "searchPlaceholder": "Quartier, ville, type de bien…",
+    "rent": "Location",
+    "sale": "Achat",
+    "house": "Maison",
+    "apartmentShort": "Appart",
+    "listingsCount_one": "{{count}} annonce autour de vous",
+    "listingsCount_other": "{{count}} annonces autour de vous",
+    "map": "Carte",
+    "empty": "Aucune annonce ne correspond à votre recherche.",
+    "loadError": "Erreur lors du chargement des annonces."
+  },
+  "searchScreen": {
+    "title": "Recherche",
+    "placeholder": "Quartier, ville, référence…",
+    "recent": "Recherches récentes",
+    "categories": "Catégories",
+    "popularCities": "Villes populaires"
+  },
+  "filters": {
+    "title": "Filtres avancés",
+    "reset": "Réinitialiser",
+    "price": "PRIX (FCFA)",
+    "area": "SURFACE (M²)",
+    "location": "LOCALISATION",
+    "city": "Ville",
+    "district": "Quartier",
+    "cityPlaceholder": "Ex. Douala",
+    "districtPlaceholder": "Ex. Bonapriso",
+    "minimum": "MINIMUM REQUIS",
+    "apply": "Appliquer les filtres"
+  },
+  "appointments": {
+    "title": "Mes rendez-vous",
+    "filterAll": "Tous",
+    "filterPending": "En attente",
+    "filterAccepted": "Acceptés",
+    "empty": "Aucun rendez-vous pour l'instant.",
+    "loadError": "Erreur lors du chargement des rendez-vous.",
+    "actionFailed": "Action impossible",
+    "actionError": "Erreur lors de la mise à jour du rendez-vous.",
+    "proposedBanner": "NOUVEAU CRÉNEAU PROPOSÉ PAR L'AGENT",
+    "youRequested": "VOUS AVIEZ DEMANDÉ",
+    "agentProposes": "L'AGENT PROPOSE",
+    "seeAgentMessage": "Voir le message de l'agent dans la messagerie",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "contactAgent": "Contacter l'agent",
+    "cancelling": "Annulation…",
+    "cancelRequest": "Annuler ma demande",
+    "status": {
+      "ACCEPTE": "ACCEPTÉ",
+      "REFUSE": "REFUSÉ",
+      "ANNULE": "ANNULÉ",
+      "EN_ATTENTE": "EN ATTENTE"
+    }
+  },
+  "messages": {
+    "title": "Messages",
+    "empty": "Aucune conversation pour l'instant.",
+    "loadError": "Erreur lors du chargement des conversations."
+  },
+  "conversation": {
+    "fallbackTitle": "Conversation",
+    "empty": "Aucun message pour l'instant -- écrivez le premier.",
+    "placeholder": "Écrire un message…",
+    "loadError": "Erreur lors du chargement de la conversation.",
+    "sendError": "Le message n’a pas pu être envoyé."
+  },
+  "favorites": {
+    "title": "Mes favoris",
+    "empty": "Aucune annonce en favoris pour l'instant."
+  },
+  "visitRequest": {
+    "title": "Demander un rendez-vous",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.com",
+    "phone": "Téléphone",
+    "date": "Date souhaitée",
+    "datePlaceholder": "JJ/MM/AAAA",
+    "time": "Heure",
+    "timePlaceholder": "HH:MM",
+    "message": "Message",
+    "messagePlaceholder": "Votre message au propriétaire…",
+    "defaultMessage": "Bonjour, je souhaite visiter \"{{title}}\".",
+    "defaultMessageWithRef": "Bonjour, je souhaite visiter \"{{title}}\" (Réf. {{reference}}).",
+    "missingFields": "Merci de remplir tous les champs.",
+    "invalidDate": "Date ou heure invalide -- utilisez JJ/MM/AAAA et HH:MM, dans le futur.",
+    "submitError": "Erreur lors de la demande de rendez-vous.",
+    "submit": "Envoyer la demande",
+    "successTitle": "Demande envoyée",
+    "successText": "Le propriétaire a reçu votre demande de rendez-vous et vous répondra via la messagerie.",
+    "backToListing": "Retour à l'annonce"
   }
 }

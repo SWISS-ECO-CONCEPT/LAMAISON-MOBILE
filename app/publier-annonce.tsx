@@ -18,6 +18,7 @@ import { colors, radius } from '../src/config/theme';
 import { createAnnonce } from '../src/services/annonceService';
 import { uploadImage } from '../src/services/imageService';
 import { PROPERTY_TYPES, type PropertyType } from '../src/data/propertyTypes';
+import i18n from '../src/i18n';
 
 type TransactionType = 'achat' | 'location';
 
@@ -53,7 +54,7 @@ export default function PublierAnnonceScreen() {
   const [publishedReference, setPublishedReference] = useState<string | null>(null);
 
   const transactionLabel = transactionType === 'achat' ? 'Achat' : 'Location';
-  const propertyLabel = PROPERTY_TYPES.find((p) => p.key === propertyType)?.label ?? '';
+  const propertyLabel = (propertyType ? i18n.t(`propertyTypes.${propertyType}`) : '');
 
   const pickPhotos = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -197,7 +198,7 @@ export default function PublierAnnonceScreen() {
                       <MaterialIcons name={type.icon} size={22} color={active ? colors.white : colors.primary} />
                     </View>
                     <Text style={[styles.propertyTypeLabel, active && styles.propertyTypeLabelActive]}>
-                      {type.label}
+                      {i18n.t(`propertyTypes.${type.key}`)}
                     </Text>
                   </Pressable>
                 );

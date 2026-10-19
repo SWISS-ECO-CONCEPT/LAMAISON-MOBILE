@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { toAbsoluteImageUrl, type AnnonceApi } from '../services/annonceService';
 
 export type ListingType = 'ACHAT' | 'LOCATION';
@@ -15,19 +16,21 @@ export type Listing = {
   images: { uri: string }[];
   type: ListingType;
   price: string;
-  priceSuffix?: string;
   title: string;
   location: string;
   reference: string;
   beds: number;
   showers: number;
   area: number;
-  publishedAgo: string;
+  // Date brute : le texte (« publiée il y a 3 jours ») est produit à
+  // l'affichage par formatPublishedAgo(), dans la langue courante. Un texte
+  // calculé ici resterait figé dans la langue du moment du chargement.
+  createdAt: string;
   description: string;
   negotiable: boolean;
   ownerId: number;
-  ownerName: string;
-  ownerRole: string;
+  ownerName: string | null;
+  ownerIsAgent: boolean;
   ownerPhone: string | null;
 };
 
@@ -39,11 +42,13 @@ function formatPrice(prix: number): string {
   return `${rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} FCFA`;
 }
 
-function formatPublishedAgo(createdAt: string): string {
+// Appelé au rendu (composant qui utilise useTranslation, donc re-rendu au
+// changement de langue).
+export function formatPublishedAgo(createdAt: string): string {
   const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000);
-  if (days <= 0) return 'publiée aujourd’hui';
-  if (days === 1) return 'publiée hier';
-  return `publiée il y a ${days} jours`;
+  if (days <= 0) return i18n.t('listing.publishedToday');
+  if (days === 1) return i18n.t('listing.publishedYesterday');
+  return i18n.t('listing.publishedDaysAgo', { count: days });
 }
 
 export function mapAnnonceToListing(a: AnnonceApi): Listing {
@@ -53,19 +58,18 @@ export function mapAnnonceToListing(a: AnnonceApi): Listing {
     images: (Array.isArray(a.images) ? a.images : []).map((path) => ({ uri: toAbsoluteImageUrl(path) })),
     type: isLocation ? 'LOCATION' : 'ACHAT',
     price: formatPrice(a.prix),
-    priceSuffix: isLocation ? '/mois' : undefined,
     title: a.titre,
     location: a.quartier ? `${a.quartier}, ${a.ville}` : a.ville,
     reference: a.bn_reference ?? `BN-${a.id}`,
     beds: a.chambres ?? 0,
     showers: a.douches ?? 0,
     area: a.surface ?? 0,
-    publishedAgo: formatPublishedAgo(a.createdAt),
+    createdAt: a.createdAt,
     description: a.description,
     negotiable: !!a.negotiable,
     ownerId: a.proprietaireId,
-    ownerName: a.proprietaire?.firstname ?? 'Propriétaire',
-    ownerRole: a.proprietaire?.role === 'AGENT' ? 'Agent LAMAISON' : 'Particulier',
+    ownerName: a.proprietaire?.firstname ?? null,
+    ownerIsAgent: a.proprietaire?.role === 'AGENT',
     ownerPhone: a.proprietaire?.phone ?? null,
   };
 }

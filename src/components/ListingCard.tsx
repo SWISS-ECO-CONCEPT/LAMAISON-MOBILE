@@ -11,6 +11,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../config/theme';
 import type { Listing } from '../data/listings';
@@ -21,6 +22,7 @@ const LIST_HORIZONTAL_PADDING = 20;
 
 export default function ListingCard({ listing }: { listing: Listing }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = screenWidth - LIST_HORIZONTAL_PADDING * 2;
   const [activeImage, setActiveImage] = useState(0);
@@ -84,14 +86,14 @@ export default function ListingCard({ listing }: { listing: Listing }) {
         <View style={styles.cardPriceRow}>
           <Text style={styles.cardPrice}>
             {listing.price}
-            {listing.priceSuffix ? (
-              <Text style={styles.cardPriceSuffix}> {listing.priceSuffix}</Text>
+            {listing.type === 'LOCATION' ? (
+              <Text style={styles.cardPriceSuffix}> {t('listing.perMonth')}</Text>
             ) : null}
           </Text>
           <View style={[styles.typeBadge, listing.type === 'LOCATION' && styles.typeBadgeLocation]}>
             <Text
               style={[styles.typeBadgeText, listing.type === 'LOCATION' && styles.typeBadgeTextLocation]}>
-              {listing.type}
+              {listing.type === 'LOCATION' ? t('listing.rent') : t('listing.sale')}
             </Text>
           </View>
         </View>
@@ -101,23 +103,21 @@ export default function ListingCard({ listing }: { listing: Listing }) {
         <View style={styles.cardLocationRow}>
           <MaterialIcons name="location-on" size={16} color={colors.textLight} />
           <Text style={styles.cardLocationText}>{listing.location}</Text>
-          <Text style={styles.cardReference}>· Réf. {listing.reference}</Text>
+          <Text style={styles.cardReference}>· {t('listing.reference', { reference: listing.reference })}</Text>
         </View>
 
         <View style={styles.cardStats}>
           <View style={styles.cardStat}>
             <MaterialIcons name="bed" size={18} color={colors.primary} />
-            <Text style={styles.cardStatText}>{listing.beds} ch.</Text>
+            <Text style={styles.cardStatText}>{t('listing.bedsShort', { count: listing.beds })}</Text>
           </View>
           <View style={styles.cardStat}>
             <MaterialIcons name="shower" size={18} color={colors.primary} />
-            <Text style={styles.cardStatText}>
-              {listing.showers} douche{listing.showers > 1 ? 's' : ''}
-            </Text>
+            <Text style={styles.cardStatText}>{t('listing.showers', { count: listing.showers })}</Text>
           </View>
           <View style={styles.cardStat}>
             <MaterialIcons name="square-foot" size={18} color={colors.primary} />
-            <Text style={styles.cardStatText}>{listing.area} m²</Text>
+            <Text style={styles.cardStatText}>{t('listing.area', { area: listing.area })}</Text>
           </View>
         </View>
       </View>
