@@ -1,0 +1,32 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "error": "Error",
+    "sessionNotFound": "Session not found, please sign in again.",
+    "sessionInvalid": "Invalid session, please sign in again."
+  },
+  "profile": {
+    "favorites": "favorites",
+    "appointments": "appointments",
+    "agentBadge": "LAMAISON agent",
+    "logout": "Sign out"
+  },
+  "role": {
+    "sectionTitle": "MY ROLE",
+    "prospect": "Individual",
+    "agent": "Real estate agent",
+    "switchError": "Could not change your role.",
+    "toAgent": {
+      "title": "Become a real estate agent",
+      "message": "You will be able to publish listings and manage visit requests."
+    },
+    "toProspect": {
+      "title": "Switch back to individual",
+      "message": "You will lose access to agent tools (listings, visit requests)."
+    }
+  },
+  "preferences": {
+    "language": "Language"
+  }
+}

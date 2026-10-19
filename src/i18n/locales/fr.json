@@ -1,0 +1,32 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "error": "Erreur",
+    "sessionNotFound": "Session introuvable, reconnecte-toi.",
+    "sessionInvalid": "Session invalide, reconnecte-toi."
+  },
+  "profile": {
+    "favorites": "favoris",
+    "appointments": "rendez-vous",
+    "agentBadge": "Agent LAMAISON",
+    "logout": "Se déconnecter"
+  },
+  "role": {
+    "sectionTitle": "MON RÔLE",
+    "prospect": "Particulier",
+    "agent": "Agent immobilier",
+    "switchError": "Erreur lors du changement de rôle.",
+    "toAgent": {
+      "title": "Passer en agent immobilier",
+      "message": "Vous pourrez publier des annonces et gérer des demandes de rendez-vous."
+    },
+    "toProspect": {
+      "title": "Repasser en particulier",
+      "message": "Vous perdrez l'accès aux outils agent (annonces, demandes de rendez-vous)."
+    }
+  },
+  "preferences": {
+    "language": "Langue"
+  }
+}
