@@ -5,6 +5,9 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-expo';
 import { useRouter, useSegments } from 'expo-router';
+// Initialise i18next avant le premier rendu (effet de bord de l'import) :
+// les écrans peuvent appeler t() dès leur premier affichage.
+import '../src/i18n';
 import { tokenCache } from '../src/lib/tokenCache';
 import { AuthProvider } from '../src/context/AuthContext';
 import { FavorisProvider } from '../src/context/FavorisContext';

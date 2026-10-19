@@ -40,7 +40,8 @@
         {
           "photosPermission": "LAMAISON a besoin d'accéder à vos photos pour ajouter des images à une annonce."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true
