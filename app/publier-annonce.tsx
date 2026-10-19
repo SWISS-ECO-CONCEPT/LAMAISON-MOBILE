@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,7 +19,6 @@ import { colors, radius } from '../src/config/theme';
 import { createAnnonce } from '../src/services/annonceService';
 import { uploadImage } from '../src/services/imageService';
 import { PROPERTY_TYPES, type PropertyType } from '../src/data/propertyTypes';
-import i18n from '../src/i18n';
 
 type TransactionType = 'achat' | 'location';
 
@@ -34,6 +34,7 @@ const MAX_PHOTOS = 12;
 // POST /annonces/:clerkId à la fin.
 export default function PublierAnnonceScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { userId: clerkId, getToken } = useAuth();
   const [step, setStep] = useState(1);
 
@@ -53,13 +54,13 @@ export default function PublierAnnonceScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [publishedReference, setPublishedReference] = useState<string | null>(null);
 
-  const transactionLabel = transactionType === 'achat' ? 'Achat' : 'Location';
-  const propertyLabel = (propertyType ? i18n.t(`propertyTypes.${propertyType}`) : '');
+  const transactionLabel = transactionType === 'achat' ? t('agent.publishForm.sale') : t('agent.publishForm.rent');
+  const propertyLabel = t(`propertyTypes.${propertyType}`);
 
   const pickPhotos = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setErrorMessage('Autorisez l\'accès à vos photos pour en ajouter.');
+      setErrorMessage(t('agent.publishForm.photoPermission'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -80,7 +81,7 @@ export default function PublierAnnonceScreen() {
   const goNext = () => {
     setErrorMessage('');
     if (step === 2 && (!title.trim() || !price.trim() || !ville.trim())) {
-      setErrorMessage('Titre, prix et ville sont obligatoires.');
+      setErrorMessage(t('agent.publishForm.requiredFields'));
       return;
     }
     if (step < 3) {
@@ -92,15 +93,15 @@ export default function PublierAnnonceScreen() {
 
   const handlePublish = async () => {
     if (!description.trim()) {
-      setErrorMessage('Merci de décrire le bien.');
+      setErrorMessage(t('agent.publishForm.descriptionRequired'));
       return;
     }
     if (photos.length === 0) {
-      setErrorMessage('Ajoutez au moins une photo.');
+      setErrorMessage(t('agent.publishForm.photoRequired'));
       return;
     }
     if (!clerkId) {
-      setErrorMessage('Session expirée, reconnectez-vous.');
+      setErrorMessage(t('common.sessionExpired'));
       return;
     }
 
@@ -109,7 +110,7 @@ export default function PublierAnnonceScreen() {
     try {
       const token = await getToken();
       if (!token) {
-        setErrorMessage('Session expirée, reconnectez-vous.');
+        setErrorMessage(t('common.sessionExpired'));
         return;
       }
 
@@ -141,7 +142,7 @@ export default function PublierAnnonceScreen() {
       );
       setPublishedReference(annonce.bn_reference ?? String(annonce.id));
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Erreur lors de la publication.');
+      setErrorMessage(err instanceof Error ? err.message : t('agent.publishForm.publishError'));
     } finally {
       setSubmitting(false);
     }
@@ -152,10 +153,12 @@ export default function PublierAnnonceScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.successState}>
           <MaterialIcons name="check-circle" size={56} color={colors.primary} />
-          <Text style={styles.successTitle}>Annonce publiée</Text>
-          <Text style={styles.successText}>Réf. {publishedReference} -- visible dès maintenant dans les recherches.</Text>
+          <Text style={styles.successTitle}>{t('agent.publishForm.successTitle')}</Text>
+          <Text style={styles.successText}>
+            {t('agent.publishForm.successText', { reference: t('listing.reference', { reference: publishedReference }) })}
+          </Text>
           <Pressable style={styles.continueButtonFull} onPress={() => router.back()}>
-            <Text style={styles.continueButtonText}>Retour</Text>
+            <Text style={styles.continueButtonText}>{t('agent.publishForm.back')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -170,7 +173,7 @@ export default function PublierAnnonceScreen() {
             <MaterialIcons name="close" size={24} color={colors.text} />
           </Pressable>
           <View style={styles.headerTitleBox}>
-            <Text style={styles.headerTitle}>Nouvelle annonce</Text>
+            <Text style={styles.headerTitle}>{t('agent.publishForm.title')}</Text>
           </View>
         </View>
 
@@ -178,14 +181,14 @@ export default function PublierAnnonceScreen() {
           {[1, 2, 3].map((index) => (
             <View key={index} style={[styles.progressSegment, index <= step && styles.progressSegmentActive]} />
           ))}
-          <Text style={styles.progressLabel}>Étape {step}/3</Text>
+          <Text style={styles.progressLabel}>{t('agent.publishForm.step', { step })}</Text>
         </View>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
         {step === 1 && (
           <View style={styles.card}>
-            <Text style={styles.cardLabel}>TYPE DE BIEN</Text>
+            <Text style={styles.cardLabel}>{t('agent.publishForm.propertyType')}</Text>
             <View style={styles.propertyTypeGrid}>
               {PROPERTY_TYPES.map((type) => {
                 const active = propertyType === type.key;
@@ -198,27 +201,27 @@ export default function PublierAnnonceScreen() {
                       <MaterialIcons name={type.icon} size={22} color={active ? colors.white : colors.primary} />
                     </View>
                     <Text style={[styles.propertyTypeLabel, active && styles.propertyTypeLabelActive]}>
-                      {i18n.t(`propertyTypes.${type.key}`)}
+                      {t(`propertyTypes.${type.key}`)}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
 
-            <Text style={[styles.cardLabel, { marginTop: 18 }]}>PROJET</Text>
+            <Text style={[styles.cardLabel, { marginTop: 18 }]}>{t('agent.publishForm.project')}</Text>
             <View style={styles.transactionRow}>
               <Pressable
                 style={[styles.transactionOption, transactionType === 'achat' && styles.transactionOptionActive]}
                 onPress={() => setTransactionType('achat')}>
                 <Text style={[styles.transactionOptionText, transactionType === 'achat' && styles.transactionOptionTextActive]}>
-                  Achat
+                  {t('agent.publishForm.sale')}
                 </Text>
               </Pressable>
               <Pressable
                 style={[styles.transactionOption, transactionType === 'location' && styles.transactionOptionActive]}
                 onPress={() => setTransactionType('location')}>
                 <Text style={[styles.transactionOptionText, transactionType === 'location' && styles.transactionOptionTextActive]}>
-                  Location
+                  {t('agent.publishForm.rent')}
                 </Text>
               </Pressable>
             </View>
@@ -229,13 +232,13 @@ export default function PublierAnnonceScreen() {
           <>
             <View style={styles.card}>
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Titre de l'annonce</Text>
-                <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex. Villa moderne 4 chambres" placeholderTextColor={colors.textLight} />
+                <Text style={styles.fieldLabel}>{t('agent.publishForm.listingTitle')}</Text>
+                <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder={t('agent.publishForm.listingTitlePlaceholder')} placeholderTextColor={colors.textLight} />
               </View>
 
               <View style={styles.fieldRow}>
                 <View style={[styles.field, { flex: 1.3 }]}>
-                  <Text style={styles.fieldLabel}>Prix</Text>
+                  <Text style={styles.fieldLabel}>{t('agent.publishForm.price')}</Text>
                   <View style={styles.inputWithSuffix}>
                     <TextInput
                       style={styles.inputFlex}
@@ -249,7 +252,7 @@ export default function PublierAnnonceScreen() {
                   </View>
                 </View>
                 <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Surface</Text>
+                  <Text style={styles.fieldLabel}>{t('agent.publishForm.surface')}</Text>
                   <View style={styles.inputWithSuffix}>
                     <TextInput
                       style={styles.inputFlex}
@@ -266,16 +269,16 @@ export default function PublierAnnonceScreen() {
 
               <View style={styles.fieldRow}>
                 <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Ville</Text>
+                  <Text style={styles.fieldLabel}>{t('filters.city')}</Text>
                   <View style={styles.inputWithIcon}>
                     <MaterialIcons name="location-on" size={19} color={colors.primary} />
                     <TextInput style={styles.inputFlex} value={ville} onChangeText={setVille} placeholder="Douala" placeholderTextColor={colors.textLight} />
                   </View>
                 </View>
                 <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Quartier</Text>
+                  <Text style={styles.fieldLabel}>{t('filters.district')}</Text>
                   <View style={styles.inputWithIcon}>
-                    <TextInput style={styles.inputFlex} value={quartier} onChangeText={setQuartier} placeholder="Optionnel" placeholderTextColor={colors.textLight} />
+                    <TextInput style={styles.inputFlex} value={quartier} onChangeText={setQuartier} placeholder={t('agent.publishForm.optional')} placeholderTextColor={colors.textLight} />
                   </View>
                 </View>
               </View>
@@ -306,7 +309,7 @@ export default function PublierAnnonceScreen() {
 
             <View style={styles.card}>
               <View style={styles.photosHeader}>
-                <Text style={styles.fieldLabel}>Photos</Text>
+                <Text style={styles.fieldLabel}>{t('agent.publishForm.photos')}</Text>
                 <Text style={styles.photosCount}>{photos.length} / {MAX_PHOTOS} · min. 1 requise</Text>
               </View>
               <View style={styles.photosRow}>
@@ -315,7 +318,7 @@ export default function PublierAnnonceScreen() {
                     <Image source={{ uri }} style={styles.photoImage} />
                     {index === 0 && (
                       <View style={styles.photoCoverBadge}>
-                        <Text style={styles.photoCoverBadgeText}>COUV.</Text>
+                        <Text style={styles.photoCoverBadgeText}>{t('agent.publishForm.coverBadge')}</Text>
                       </View>
                     )}
                     <Pressable style={styles.photoRemoveButton} onPress={() => removePhoto(uri)}>
@@ -326,7 +329,7 @@ export default function PublierAnnonceScreen() {
                 {photos.length < MAX_PHOTOS && (
                   <Pressable style={styles.addPhotoButton} onPress={pickPhotos}>
                     <MaterialIcons name="add-a-photo" size={22} color={colors.primaryDark} />
-                    <Text style={styles.addPhotoText}>Ajouter</Text>
+                    <Text style={styles.addPhotoText}>{t('agent.publishForm.addPhoto')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -337,45 +340,47 @@ export default function PublierAnnonceScreen() {
         {step === 3 && (
           <>
             <View style={styles.card}>
-              <Text style={styles.fieldLabel}>Description</Text>
+              <Text style={styles.fieldLabel}>{t('listing.description')}</Text>
               <TextInput
                 style={styles.descriptionInput}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Décrivez le bien : atouts, quartier, équipements…"
+                placeholder={t('agent.publishForm.descriptionPlaceholder')}
                 placeholderTextColor={colors.textLight}
                 multiline
               />
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>RÉCAPITULATIF</Text>
+              <Text style={styles.cardLabel}>{t('agent.publishForm.summary')}</Text>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Type</Text>
+                <Text style={styles.summaryLabel}>{t('agent.publishForm.summaryType')}</Text>
                 <Text style={styles.summaryValue}>{propertyLabel} · {transactionLabel}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Titre</Text>
+                <Text style={styles.summaryLabel}>{t('agent.publishForm.summaryTitle')}</Text>
                 <Text style={styles.summaryValue}>{title || '—'}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Prix</Text>
+                <Text style={styles.summaryLabel}>{t('agent.publishForm.price')}</Text>
                 <Text style={styles.summaryValue}>{price ? `${price} FCFA` : '—'}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Surface</Text>
+                <Text style={styles.summaryLabel}>{t('agent.publishForm.surface')}</Text>
                 <Text style={styles.summaryValue}>{surface ? `${surface} m²` : '—'}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Localisation</Text>
+                <Text style={styles.summaryLabel}>{t('agent.publishForm.summaryLocation')}</Text>
                 <Text style={styles.summaryValue}>{quartier ? `${quartier}, ${ville}` : ville || '—'}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Chambres / douches</Text>
-                <Text style={styles.summaryValue}>{bedrooms} ch. · {bathrooms} douche{bathrooms > 1 ? 's' : ''}</Text>
+                <Text style={styles.summaryLabel}>{t('agent.publishForm.summaryRooms')}</Text>
+                <Text style={styles.summaryValue}>
+                  {t('listing.bedsShort', { count: bedrooms })} · {t('listing.showers', { count: bathrooms })}
+                </Text>
               </View>
               <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
-                <Text style={styles.summaryLabel}>Photos</Text>
+                <Text style={styles.summaryLabel}>{t('agent.publishForm.photos')}</Text>
                 <Text style={styles.summaryValue}>{photos.length}</Text>
               </View>
             </View>
@@ -387,10 +392,10 @@ export default function PublierAnnonceScreen() {
 
       <View style={styles.footer}>
         <Pressable style={styles.cancelButton} onPress={() => router.back()} disabled={submitting}>
-          <Text style={styles.cancelButtonText}>Annuler</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
         </Pressable>
         <Pressable style={[styles.continueButton, submitting && styles.continueButtonDisabled]} onPress={goNext} disabled={submitting}>
-          {submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.continueButtonText}>{step < 3 ? 'Continuer' : 'Publier'}</Text>}
+          {submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.continueButtonText}>{step < 3 ? t('agent.publishForm.continue') : t('agent.publish')}</Text>}
         </Pressable>
       </View>
     </SafeAreaView>

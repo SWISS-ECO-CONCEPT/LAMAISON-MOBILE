@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../src/config/theme';
@@ -16,6 +17,7 @@ import SearchBar from '../../src/components/SearchBar';
 // pas de compteur de favoris (pas d'agrégat disponible sur cette route).
 export default function AgentListingsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { userId: clerkId } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [listings, setListings] = useState<ReturnType<typeof mapAnnonceToListing>[]>([]);
@@ -32,11 +34,11 @@ export default function AgentListingsScreen() {
       setListings(annonces.map(mapAnnonceToListing));
       setViews(Object.fromEntries(annonces.map((a) => [String(a.id), a.vues])));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement de vos annonces.');
+      setError(err instanceof Error ? err.message : t('agent.listings.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [clerkId]);
+  }, [clerkId, t]);
 
   useEffect(() => {
     loadListings();
@@ -50,9 +52,9 @@ export default function AgentListingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mes annonces</Text>
+        <Text style={styles.title}>{t('agent.myListings')}</Text>
         <View style={{ marginTop: 14 }}>
-          <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Titre, référence…" />
+          <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder={t('agent.listings.searchPlaceholder')} />
         </View>
       </View>
 
@@ -64,13 +66,13 @@ export default function AgentListingsScreen() {
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={loadListings}>
-            <Text style={styles.retryText}>Réessayer</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
           {filteredListings.length === 0 ? (
-            <Text style={styles.emptyText}>Aucune annonce publiée pour l'instant.</Text>
+            <Text style={styles.emptyText}>{t('agent.noListings')}</Text>
           ) : (
             filteredListings.map((listing) => (
               <Pressable
@@ -85,9 +87,9 @@ export default function AgentListingsScreen() {
                 <View style={styles.listingInfo}>
                   <View style={styles.listingBadgeRow}>
                     <View style={styles.statusBadge}>
-                      <Text style={styles.statusBadgeText}>EN LIGNE</Text>
+                      <Text style={styles.statusBadgeText}>{t('agent.online')}</Text>
                     </View>
-                    <Text style={styles.listingMeta}>Réf. {listing.reference}</Text>
+                    <Text style={styles.listingMeta}>{t('listing.reference', { reference: listing.reference })}</Text>
                   </View>
                   <Text style={styles.listingTitle}>{listing.title}</Text>
                   <Text style={styles.listingPrice}>{listing.price}</Text>

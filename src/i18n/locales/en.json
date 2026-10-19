@@ -45,7 +45,9 @@
     "search": "Search",
     "appointments": "Visits",
     "messages": "Messages",
-    "profile": "Profile"
+    "profile": "Profile",
+    "listings": "Listings",
+    "requests": "Requests"
   },
   "time": {
     "yesterday": "Yesterday",
@@ -179,5 +181,80 @@
     "successTitle": "Request sent",
     "successText": "The owner has received your visit request and will reply through your inbox.",
     "backToListing": "Back to listing"
+  },
+  "agent": {
+    "online": "ONLINE",
+    "myListings": "My listings",
+    "noListings": "No listings published yet.",
+    "publish": "Publish",
+    "home": {
+      "loadError": "Could not load your data.",
+      "activeListings_one": "active listing",
+      "activeListings_other": "active listings",
+      "views_one": "view (total)",
+      "views_other": "views (total)",
+      "requests_one": "request",
+      "requests_other": "requests",
+      "pendingBanner_one": "{{count}} pending visit request",
+      "pendingBanner_other": "{{count}} pending visit requests",
+      "pendingBannerSubtitle": "Accept, decline or propose another time slot",
+      "seeAll": "See all"
+    },
+    "listings": {
+      "searchPlaceholder": "Title, reference…",
+      "loadError": "Could not load your listings."
+    },
+    "requests": {
+      "title": "Visit requests",
+      "filterHistory": "History",
+      "empty": "No requests here yet.",
+      "loadError": "Could not load visit requests.",
+      "receivedAt": "Received {{when}}",
+      "requestedSlot": "Requested slot: {{date}}",
+      "quotedMessage": "“{{message}}”",
+      "reschedule": "Propose another time slot",
+      "waitingClient": "WAITING FOR CLIENT",
+      "proposedSlot": "Proposed slot: {{date}}",
+      "contactClient": "Contact the client",
+      "clientFallback": "Client",
+      "rescheduleSubtitle": "{{name}} will receive the proposal and can accept or decline it.",
+      "initialRequest": "INITIAL REQUEST",
+      "newDate": "New date",
+      "invalidFormat": "Invalid date or time -- use DD/MM/YYYY and HH:MM.",
+      "mustBeFuture": "The proposed date must be valid and in the future.",
+      "proposalError": "Could not send the time slot proposal.",
+      "sendProposal": "Send proposal"
+    },
+    "publishForm": {
+      "title": "New listing",
+      "step": "Step {{step}}/3",
+      "propertyType": "PROPERTY TYPE",
+      "project": "TRANSACTION",
+      "sale": "Sale",
+      "rent": "Rent",
+      "listingTitle": "Listing title",
+      "listingTitlePlaceholder": "e.g. Modern 4-bedroom villa",
+      "price": "Price",
+      "surface": "Area",
+      "optional": "Optional",
+      "photos": "Photos",
+      "coverBadge": "COVER",
+      "addPhoto": "Add",
+      "descriptionPlaceholder": "Describe the property: highlights, neighborhood, amenities…",
+      "summary": "SUMMARY",
+      "summaryType": "Type",
+      "summaryTitle": "Title",
+      "summaryLocation": "Location",
+      "summaryRooms": "Bedrooms / showers",
+      "continue": "Continue",
+      "back": "Back",
+      "successTitle": "Listing published",
+      "successText": "{{reference}} -- now visible in search results.",
+      "photoPermission": "Allow access to your photos to add some.",
+      "requiredFields": "Title, price and city are required.",
+      "descriptionRequired": "Please describe the property.",
+      "photoRequired": "Add at least one photo.",
+      "publishError": "Could not publish the listing."
+    }
   }
 }

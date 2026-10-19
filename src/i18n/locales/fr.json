@@ -45,7 +45,9 @@
     "search": "Recherche",
     "appointments": "RDV",
     "messages": "Messages",
-    "profile": "Profil"
+    "profile": "Profil",
+    "listings": "Annonces",
+    "requests": "Demandes"
   },
   "time": {
     "yesterday": "Hier",
@@ -179,5 +181,80 @@
     "successTitle": "Demande envoyée",
     "successText": "Le propriétaire a reçu votre demande de rendez-vous et vous répondra via la messagerie.",
     "backToListing": "Retour à l'annonce"
+  },
+  "agent": {
+    "online": "EN LIGNE",
+    "myListings": "Mes annonces",
+    "noListings": "Aucune annonce publiée pour l'instant.",
+    "publish": "Publier",
+    "home": {
+      "loadError": "Erreur lors du chargement.",
+      "activeListings_one": "annonce active",
+      "activeListings_other": "annonces actives",
+      "views_one": "vue (total)",
+      "views_other": "vues (total)",
+      "requests_one": "demande",
+      "requests_other": "demandes",
+      "pendingBanner_one": "{{count}} demande de visite en attente",
+      "pendingBanner_other": "{{count}} demandes de visite en attente",
+      "pendingBannerSubtitle": "Accepter, refuser ou proposer un autre créneau",
+      "seeAll": "Voir tout"
+    },
+    "listings": {
+      "searchPlaceholder": "Titre, référence…",
+      "loadError": "Erreur lors du chargement de vos annonces."
+    },
+    "requests": {
+      "title": "Demandes de visite",
+      "filterHistory": "Historique",
+      "empty": "Aucune demande ici pour l'instant.",
+      "loadError": "Erreur lors du chargement des demandes.",
+      "receivedAt": "Reçue {{when}}",
+      "requestedSlot": "Créneau demandé : {{date}}",
+      "quotedMessage": "« {{message}} »",
+      "reschedule": "Proposer un autre créneau",
+      "waitingClient": "EN ATTENTE DU CLIENT",
+      "proposedSlot": "Créneau proposé : {{date}}",
+      "contactClient": "Contacter le client",
+      "clientFallback": "Client",
+      "rescheduleSubtitle": "{{name}} recevra la proposition et pourra l'accepter ou la refuser.",
+      "initialRequest": "DEMANDE INITIALE",
+      "newDate": "Nouvelle date",
+      "invalidFormat": "Date ou heure invalide -- utilisez JJ/MM/AAAA et HH:MM.",
+      "mustBeFuture": "La date proposée doit être valide et dans le futur.",
+      "proposalError": "Erreur lors de la proposition de créneau.",
+      "sendProposal": "Envoyer la proposition"
+    },
+    "publishForm": {
+      "title": "Nouvelle annonce",
+      "step": "Étape {{step}}/3",
+      "propertyType": "TYPE DE BIEN",
+      "project": "PROJET",
+      "sale": "Achat",
+      "rent": "Location",
+      "listingTitle": "Titre de l'annonce",
+      "listingTitlePlaceholder": "Ex. Villa moderne 4 chambres",
+      "price": "Prix",
+      "surface": "Surface",
+      "optional": "Optionnel",
+      "photos": "Photos",
+      "coverBadge": "COUV.",
+      "addPhoto": "Ajouter",
+      "descriptionPlaceholder": "Décrivez le bien : atouts, quartier, équipements…",
+      "summary": "RÉCAPITULATIF",
+      "summaryType": "Type",
+      "summaryTitle": "Titre",
+      "summaryLocation": "Localisation",
+      "summaryRooms": "Chambres / douches",
+      "continue": "Continuer",
+      "back": "Retour",
+      "successTitle": "Annonce publiée",
+      "successText": "{{reference}} -- visible dès maintenant dans les recherches.",
+      "photoPermission": "Autorisez l'accès à vos photos pour en ajouter.",
+      "requiredFields": "Titre, prix et ville sont obligatoires.",
+      "descriptionRequired": "Merci de décrire le bien.",
+      "photoRequired": "Ajoutez au moins une photo.",
+      "publishError": "Erreur lors de la publication."
+    }
   }
 }
