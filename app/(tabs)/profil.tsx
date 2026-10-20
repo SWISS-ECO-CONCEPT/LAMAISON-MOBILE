@@ -105,13 +105,13 @@ export default function ProfilScreen() {
                     <View style={styles.card}>
                         <View style={styles.listRow}>
                             <MaterialIcons name="shield" size={21} color={colors.textMuted} />
-                            <Text style={styles.listRowLabel}>Sécurité et confidentialité</Text>
+                            <Text style={styles.listRowLabel}>{t('profile.security')}</Text>
                             <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
                         </View>
                         <View style={styles.divider} />
                         <View style={styles.listRow}>
                             <MaterialIcons name="help" size={21} color={colors.textMuted} />
-                            <Text style={styles.listRowLabel}>Aide et contact</Text>
+                            <Text style={styles.listRowLabel}>{t('profile.help')}</Text>
                             <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
                         </View>
                     </View>

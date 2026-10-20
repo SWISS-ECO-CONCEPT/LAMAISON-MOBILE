@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@clerk/clerk-expo';
 import { useStableGetToken } from '../../src/lib/useStableGetToken';
 import { showError } from '../../src/lib/dialogs';
@@ -29,12 +30,21 @@ import {
 import { formatDateBadge, formatDateTime, formatRelativeTime, formatTimeOnly } from '../../src/utils/time';
 
 const FILTERS = [
-  { key: 'pending', label: 'En attente' },
-  { key: 'accepted', label: 'Acceptés' },
-  { key: 'history', label: 'Historique' },
+  // Libellés partagés avec l'écran rendez-vous du particulier quand le sens
+  // est identique (En attente / Acceptés) ; « Historique » est propre à l'agent.
+  { key: 'pending', labelKey: 'appointments.filterPending' },
+  { key: 'accepted', labelKey: 'appointments.filterAccepted' },
+  { key: 'history', labelKey: 'agent.requests.filterHistory' },
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]['key'];
+
+// La carte « finale » (dernier bloc du rendu) ne reçoit que ACCEPTE, REFUSE
+// ou ANNULE : les statuts EN_ATTENTE et PROPOSE ont leur propre carte plus
+// haut. Tout statut inattendu retombe sur ANNULE, comme l'ancien ternaire.
+function finalStatus(status: RdvApi['status']): 'ACCEPTE' | 'REFUSE' | 'ANNULE' {
+  return status === 'ACCEPTE' || status === 'REFUSE' ? status : 'ANNULE';
+}
 
 // Avant : AGENT_REQUESTS mocké, aucune action réelle (console.log),
 // l'onglet "Historique" était câblé pour ne JAMAIS rien afficher. Maintenant
@@ -46,6 +56,7 @@ type FilterKey = (typeof FILTERS)[number]['key'];
 // génère lui-même le message automatique envoyé dans la messagerie.
 export default function AgentDemandesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { userId: clerkId } = useAuth();
   const getToken = useStableGetToken();
   const { user: dbUser } = useAuthContext();
@@ -67,15 +78,15 @@ export default function AgentDemandesScreen() {
     setError(null);
     try {
       const token = await getToken();
-      if (!token) throw new Error('Session expirée, reconnecte-toi.');
+      if (!token) throw new Error(t('common.sessionExpired'));
       const data = await getRdvsByAgent(clerkId, token);
       setRdvs(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des demandes.');
+      setError(err instanceof Error ? err.message : t('agent.requests.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [clerkId, getToken]);
+  }, [clerkId, getToken, t]);
 
   useEffect(() => {
     loadRdvs();
@@ -94,13 +105,13 @@ export default function AgentDemandesScreen() {
     setActingOnId(rdv.id);
     try {
       const token = await getToken();
-      if (!token) throw new Error('Session expirée, reconnecte-toi.');
+      if (!token) throw new Error(t('common.sessionExpired'));
       await action(rdv.id, token);
       await loadRdvs();
     } catch (err) {
       // L'agent/le prospect doit savoir que son action n'a pas abouti -- un
       // simple log console laissait croire que le clic avait fonctionné.
-      showError('Action impossible', err instanceof Error ? err.message : 'Erreur lors de la mise à jour du rendez-vous.');
+      showError(t('appointments.actionFailed'), err instanceof Error ? err.message : t('appointments.actionError'));
     } finally {
       setActingOnId(null);
     }
@@ -119,26 +130,26 @@ export default function AgentDemandesScreen() {
     const dateMatch = date.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     const timeMatch = heure.trim().match(/^(\d{1,2}):(\d{2})$/);
     if (!dateMatch || !timeMatch) {
-      setRescheduleError('Date ou heure invalide -- utilisez JJ/MM/AAAA et HH:MM.');
+      setRescheduleError(t('agent.requests.invalidFormat'));
       return;
     }
     const [, day, month, year] = dateMatch;
     const [, hour, minute] = timeMatch;
     const proposed = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
     if (Number.isNaN(proposed.getTime()) || proposed.getTime() < Date.now()) {
-      setRescheduleError('La date proposée doit être valide et dans le futur.');
+      setRescheduleError(t('agent.requests.mustBeFuture'));
       return;
     }
 
     setRescheduling(true);
     try {
       const token = await getToken();
-      if (!token) throw new Error('Session expirée, reconnecte-toi.');
+      if (!token) throw new Error(t('common.sessionExpired'));
       await proposeRdv(rescheduleRdv.id, proposed.toISOString(), token);
       setRescheduleRdv(null);
       await loadRdvs();
     } catch (err) {
-      setRescheduleError(err instanceof Error ? err.message : 'Erreur lors de la proposition de créneau.');
+      setRescheduleError(err instanceof Error ? err.message : t('agent.requests.proposalError'));
     } finally {
       setRescheduling(false);
     }
@@ -149,7 +160,7 @@ export default function AgentDemandesScreen() {
     if (!prospect) return;
     router.push({
       pathname: '/conversation/[id]',
-      params: { id: String(prospect.id), name: prospect.firstname ?? 'Client', subtitle: 'Particulier' },
+      params: { id: String(prospect.id), name: prospect.firstname ?? t('agent.requests.clientFallback'), subtitle: t('common.roleProspect') },
     });
   };
 
@@ -158,7 +169,7 @@ export default function AgentDemandesScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.title}>Demandes de visite</Text>
+            <Text style={styles.title}>{t('agent.requests.title')}</Text>
             {dbUser?.firstname ? <Text style={styles.subtitle}>{dbUser.firstname}</Text> : null}
           </View>
         </View>
@@ -173,7 +184,7 @@ export default function AgentDemandesScreen() {
                 style={[styles.filterChip, active && styles.filterChipActive]}
                 onPress={() => setActiveFilter(filter.key)}>
                 <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                  {filter.label}
+                  {t(filter.labelKey)}
                   {count !== null ? ` (${count})` : ''}
                 </Text>
               </Pressable>
@@ -193,13 +204,13 @@ export default function AgentDemandesScreen() {
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={loadRdvs}>
-            <Text style={styles.retryText}>Réessayer</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
           {visibleRdvs.length === 0 ? (
-            <Text style={styles.emptyText}>Aucune demande ici pour l'instant.</Text>
+            <Text style={styles.emptyText}>{t('agent.requests.empty')}</Text>
           ) : (
             visibleRdvs.map((rdv) => {
               const listing = rdv.annonce ? mapAnnonceToListing(rdv.annonce) : null;
@@ -212,10 +223,10 @@ export default function AgentDemandesScreen() {
                       <View style={styles.avatar} />
                       <View style={styles.requestHeaderInfo}>
                         <Text style={styles.clientName}>{rdv.prenom} {rdv.nom}</Text>
-                        <Text style={styles.clientMeta}>Reçue {formatRelativeTime(rdv.createdAt)}</Text>
+                        <Text style={styles.clientMeta}>{t('agent.requests.receivedAt', { when: formatRelativeTime(rdv.createdAt) })}</Text>
                       </View>
                       <View style={styles.pendingBadge}>
-                        <Text style={styles.pendingBadgeText}>EN ATTENTE</Text>
+                        <Text style={styles.pendingBadgeText}>{t('appointments.status.EN_ATTENTE')}</Text>
                       </View>
                     </View>
 
@@ -228,30 +239,30 @@ export default function AgentDemandesScreen() {
                       <View style={styles.listingInfo}>
                         <Text style={styles.listingTitle}>{listing?.title}</Text>
                         <Text style={styles.listingMeta}>
-                          Réf. {listing?.reference} · {listing?.location} · {listing?.price}
+                          {t('listing.reference', { reference: listing?.reference ?? '' })} · {listing?.location} · {listing?.price}
                         </Text>
                       </View>
                     </View>
 
                     <View style={styles.slotRow}>
                       <MaterialIcons name="event" size={19} color={colors.primary} />
-                      <Text style={styles.slotText}>Créneau demandé : {formatDateTime(rdv.date)}</Text>
+                      <Text style={styles.slotText}>{t('agent.requests.requestedSlot', { date: formatDateTime(rdv.date) })}</Text>
                     </View>
 
-                    {rdv.message ? <Text style={styles.messageText}>« {rdv.message} »</Text> : null}
+                    {rdv.message ? <Text style={styles.messageText}>{t('agent.requests.quotedMessage', { message: rdv.message })}</Text> : null}
 
                     <View style={styles.actionsRow}>
                       <Pressable style={styles.acceptButton} disabled={acting} onPress={() => runAction(rdv, acceptRdv)}>
-                        {acting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.acceptButtonText}>Accepter</Text>}
+                        {acting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.acceptButtonText}>{t('appointments.accept')}</Text>}
                       </Pressable>
                       <Pressable style={styles.declineButton} disabled={acting} onPress={() => runAction(rdv, rejectRdv)}>
-                        <Text style={styles.declineButtonText}>Refuser</Text>
+                        <Text style={styles.declineButtonText}>{t('appointments.decline')}</Text>
                       </Pressable>
                     </View>
 
                     <Pressable style={styles.rescheduleButton} onPress={() => openReschedule(rdv)}>
                       <MaterialIcons name="swap-horiz" size={18} color={colors.primaryDark} />
-                      <Text style={styles.rescheduleButtonText}>Proposer un autre créneau</Text>
+                      <Text style={styles.rescheduleButtonText}>{t('agent.requests.reschedule')}</Text>
                     </Pressable>
                   </View>
                 );
@@ -267,11 +278,11 @@ export default function AgentDemandesScreen() {
                         <Text style={styles.clientMeta}>{listing?.title}</Text>
                       </View>
                       <View style={styles.proposedBadge}>
-                        <Text style={styles.proposedBadgeText}>EN ATTENTE DU CLIENT</Text>
+                        <Text style={styles.proposedBadgeText}>{t('agent.requests.waitingClient')}</Text>
                       </View>
                     </View>
                     <Text style={styles.waitingText}>
-                      Créneau proposé : {rdv.proposedDate ? formatDateTime(rdv.proposedDate) : '—'}
+                      {t('agent.requests.proposedSlot', { date: rdv.proposedDate ? formatDateTime(rdv.proposedDate) : '—' })}
                     </Text>
                   </View>
                 );
@@ -293,18 +304,18 @@ export default function AgentDemandesScreen() {
                         color={rdv.status === 'ACCEPTE' ? colors.primary : colors.danger}
                       />
                       <Text style={styles.acceptedStatusText}>
-                        {rdv.status === 'ACCEPTE' ? 'ACCEPTÉ' : rdv.status === 'REFUSE' ? 'REFUSÉ' : 'ANNULÉ'} · {formatTimeOnly(rdv.date)}
+                        {t(`appointments.status.${finalStatus(rdv.status)}`)} · {formatTimeOnly(rdv.date)}
                       </Text>
                     </View>
                     <Text style={styles.listingTitle}>
                       {rdv.prenom} {rdv.nom} · {listing?.title}
                     </Text>
                     <Text style={styles.listingMeta}>
-                      Réf. {listing?.reference} · {listing?.location} · {listing?.price}
+                      {t('listing.reference', { reference: listing?.reference ?? '' })} · {listing?.location} · {listing?.price}
                     </Text>
                     {rdv.status === 'ACCEPTE' ? (
                       <Pressable style={styles.contactButton} onPress={() => goToConversation(rdv)}>
-                        <Text style={styles.contactButtonText}>Contacter le client</Text>
+                        <Text style={styles.contactButtonText}>{t('agent.requests.contactClient')}</Text>
                       </Pressable>
                     ) : null}
                   </View>
@@ -323,13 +334,13 @@ export default function AgentDemandesScreen() {
         <Pressable style={styles.sheetBackdrop} onPress={() => setRescheduleRdv(null)} />
         <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Proposer un autre créneau</Text>
+          <Text style={styles.sheetTitle}>{t('agent.requests.reschedule')}</Text>
           <Text style={styles.sheetSubtitle}>
-            {rescheduleRdv?.prenom} {rescheduleRdv?.nom} recevra la proposition et pourra l'accepter ou la refuser.
+            {t('agent.requests.rescheduleSubtitle', { name: `${rescheduleRdv?.prenom ?? ''} ${rescheduleRdv?.nom ?? ''}`.trim() })}
           </Text>
 
           <View style={styles.initialRequestBox}>
-            <Text style={styles.initialRequestLabel}>DEMANDE INITIALE</Text>
+            <Text style={styles.initialRequestLabel}>{t('agent.requests.initialRequest')}</Text>
             <Text style={styles.initialRequestValue}>
               {rescheduleRdv ? formatDateTime(rescheduleRdv.date) : ''}
             </Text>
@@ -337,19 +348,19 @@ export default function AgentDemandesScreen() {
 
           <View style={styles.row}>
             <View style={[styles.field, styles.fieldHalf]}>
-              <Text style={styles.sheetSectionLabel}>Nouvelle date</Text>
-              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder="JJ/MM/AAAA" placeholderTextColor="#9ca3af" keyboardType="number-pad" />
+              <Text style={styles.sheetSectionLabel}>{t('agent.requests.newDate')}</Text>
+              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder={t('visitRequest.datePlaceholder')} placeholderTextColor="#9ca3af" keyboardType="number-pad" />
             </View>
             <View style={[styles.field, styles.fieldHalf]}>
-              <Text style={styles.sheetSectionLabel}>Heure</Text>
-              <TextInput style={styles.input} value={heure} onChangeText={setHeure} placeholder="HH:MM" placeholderTextColor="#9ca3af" keyboardType="number-pad" />
+              <Text style={styles.sheetSectionLabel}>{t('visitRequest.time')}</Text>
+              <TextInput style={styles.input} value={heure} onChangeText={setHeure} placeholder={t('visitRequest.timePlaceholder')} placeholderTextColor="#9ca3af" keyboardType="number-pad" />
             </View>
           </View>
 
           {rescheduleError ? <Text style={styles.rescheduleErrorText}>{rescheduleError}</Text> : null}
 
           <Pressable style={styles.sendButton} onPress={sendProposal} disabled={rescheduling}>
-            {rescheduling ? <ActivityIndicator color={colors.white} /> : <Text style={styles.sendButtonText}>Envoyer la proposition</Text>}
+            {rescheduling ? <ActivityIndicator color={colors.white} /> : <Text style={styles.sendButtonText}>{t('agent.requests.sendProposal')}</Text>}
           </Pressable>
         </View>
       </Modal>

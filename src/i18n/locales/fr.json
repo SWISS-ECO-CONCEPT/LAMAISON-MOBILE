@@ -4,13 +4,24 @@
     "confirm": "Confirmer",
     "error": "Erreur",
     "sessionNotFound": "Session introuvable, reconnecte-toi.",
-    "sessionInvalid": "Session invalide, reconnecte-toi."
+    "sessionInvalid": "Session invalide, reconnecte-toi.",
+    "retry": "Réessayer",
+    "sessionExpired": "Session expirée, reconnecte-toi.",
+    "search": "Rechercher…",
+    "min": "Min",
+    "max": "Max",
+    "unlimited": "Illimité",
+    "roleAgent": "Agent LAMAISON",
+    "roleProspect": "Particulier",
+    "owner": "Propriétaire"
   },
   "profile": {
     "favorites": "favoris",
     "appointments": "rendez-vous",
     "agentBadge": "Agent LAMAISON",
-    "logout": "Se déconnecter"
+    "logout": "Se déconnecter",
+    "security": "Sécurité et confidentialité",
+    "help": "Aide et contact"
   },
   "role": {
     "sectionTitle": "MON RÔLE",
@@ -28,5 +39,290 @@
   },
   "preferences": {
     "language": "Langue"
+  },
+  "tabs": {
+    "home": "Accueil",
+    "search": "Recherche",
+    "appointments": "RDV",
+    "messages": "Messages",
+    "profile": "Profil",
+    "listings": "Annonces",
+    "requests": "Demandes"
+  },
+  "time": {
+    "yesterday": "Hier",
+    "todayUpper": "AUJOURD'HUI",
+    "yesterdayUpper": "HIER",
+    "dateAtTime": "{{date}} à {{time}}"
+  },
+  "listing": {
+    "rent": "LOCATION",
+    "sale": "ACHAT",
+    "perMonth": "/mois",
+    "reference": "Réf. {{reference}}",
+    "publishedToday": "publiée aujourd’hui",
+    "publishedYesterday": "publiée hier",
+    "publishedDaysAgo": "publiée il y a {{count}} jours",
+    "bedsShort": "{{count}} ch.",
+    "showers_one": "{{count}} douche",
+    "showers_other": "{{count}} douches",
+    "area": "{{area}} m²",
+    "bedrooms": "chambres",
+    "showersLabel": "douches",
+    "areaUnit": "m²",
+    "description": "Description",
+    "requestVisit": "Demander un rendez-vous",
+    "notFound": "Annonce introuvable.",
+    "backHome": "Retour à l'accueil"
+  },
+  "propertyTypes": {
+    "maison": "Maison",
+    "appartement": "Appartement",
+    "terrain": "Terrain",
+    "chambre": "Chambre",
+    "meublé": "Meublé",
+    "studio": "Studio",
+    "duplex": "Duplex"
+  },
+  "home": {
+    "greeting": "Bonjour",
+    "greetingName": "Bonjour {{name}}",
+    "searchPlaceholder": "Quartier, ville, type de bien…",
+    "rent": "Location",
+    "sale": "Achat",
+    "house": "Maison",
+    "apartmentShort": "Appart",
+    "listingsCount_one": "{{count}} annonce autour de vous",
+    "listingsCount_other": "{{count}} annonces autour de vous",
+    "map": "Carte",
+    "empty": "Aucune annonce ne correspond à votre recherche.",
+    "loadError": "Erreur lors du chargement des annonces."
+  },
+  "searchScreen": {
+    "title": "Recherche",
+    "placeholder": "Quartier, ville, référence…",
+    "recent": "Recherches récentes",
+    "categories": "Catégories",
+    "popularCities": "Villes populaires"
+  },
+  "filters": {
+    "title": "Filtres avancés",
+    "reset": "Réinitialiser",
+    "price": "PRIX (FCFA)",
+    "area": "SURFACE (M²)",
+    "location": "LOCALISATION",
+    "city": "Ville",
+    "district": "Quartier",
+    "cityPlaceholder": "Ex. Douala",
+    "districtPlaceholder": "Ex. Bonapriso",
+    "minimum": "MINIMUM REQUIS",
+    "apply": "Appliquer les filtres"
+  },
+  "appointments": {
+    "title": "Mes rendez-vous",
+    "filterAll": "Tous",
+    "filterPending": "En attente",
+    "filterAccepted": "Acceptés",
+    "empty": "Aucun rendez-vous pour l'instant.",
+    "loadError": "Erreur lors du chargement des rendez-vous.",
+    "actionFailed": "Action impossible",
+    "actionError": "Erreur lors de la mise à jour du rendez-vous.",
+    "proposedBanner": "NOUVEAU CRÉNEAU PROPOSÉ PAR L'AGENT",
+    "youRequested": "VOUS AVIEZ DEMANDÉ",
+    "agentProposes": "L'AGENT PROPOSE",
+    "seeAgentMessage": "Voir le message de l'agent dans la messagerie",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "contactAgent": "Contacter l'agent",
+    "cancelling": "Annulation…",
+    "cancelRequest": "Annuler ma demande",
+    "status": {
+      "ACCEPTE": "ACCEPTÉ",
+      "REFUSE": "REFUSÉ",
+      "ANNULE": "ANNULÉ",
+      "EN_ATTENTE": "EN ATTENTE"
+    }
+  },
+  "messages": {
+    "title": "Messages",
+    "empty": "Aucune conversation pour l'instant.",
+    "loadError": "Erreur lors du chargement des conversations."
+  },
+  "conversation": {
+    "fallbackTitle": "Conversation",
+    "empty": "Aucun message pour l'instant -- écrivez le premier.",
+    "placeholder": "Écrire un message…",
+    "loadError": "Erreur lors du chargement de la conversation.",
+    "sendError": "Le message n’a pas pu être envoyé."
+  },
+  "favorites": {
+    "title": "Mes favoris",
+    "empty": "Aucune annonce en favoris pour l'instant."
+  },
+  "visitRequest": {
+    "title": "Demander un rendez-vous",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.com",
+    "phone": "Téléphone",
+    "date": "Date souhaitée",
+    "datePlaceholder": "JJ/MM/AAAA",
+    "time": "Heure",
+    "timePlaceholder": "HH:MM",
+    "message": "Message",
+    "messagePlaceholder": "Votre message au propriétaire…",
+    "defaultMessage": "Bonjour, je souhaite visiter \"{{title}}\".",
+    "defaultMessageWithRef": "Bonjour, je souhaite visiter \"{{title}}\" (Réf. {{reference}}).",
+    "missingFields": "Merci de remplir tous les champs.",
+    "invalidDate": "Date ou heure invalide -- utilisez JJ/MM/AAAA et HH:MM, dans le futur.",
+    "submitError": "Erreur lors de la demande de rendez-vous.",
+    "submit": "Envoyer la demande",
+    "successTitle": "Demande envoyée",
+    "successText": "Le propriétaire a reçu votre demande de rendez-vous et vous répondra via la messagerie.",
+    "backToListing": "Retour à l'annonce"
+  },
+  "agent": {
+    "online": "EN LIGNE",
+    "myListings": "Mes annonces",
+    "noListings": "Aucune annonce publiée pour l'instant.",
+    "publish": "Publier",
+    "home": {
+      "loadError": "Erreur lors du chargement.",
+      "activeListings_one": "annonce active",
+      "activeListings_other": "annonces actives",
+      "views_one": "vue (total)",
+      "views_other": "vues (total)",
+      "requests_one": "demande",
+      "requests_other": "demandes",
+      "pendingBanner_one": "{{count}} demande de visite en attente",
+      "pendingBanner_other": "{{count}} demandes de visite en attente",
+      "pendingBannerSubtitle": "Accepter, refuser ou proposer un autre créneau",
+      "seeAll": "Voir tout"
+    },
+    "listings": {
+      "searchPlaceholder": "Titre, référence…",
+      "loadError": "Erreur lors du chargement de vos annonces."
+    },
+    "requests": {
+      "title": "Demandes de visite",
+      "filterHistory": "Historique",
+      "empty": "Aucune demande ici pour l'instant.",
+      "loadError": "Erreur lors du chargement des demandes.",
+      "receivedAt": "Reçue {{when}}",
+      "requestedSlot": "Créneau demandé : {{date}}",
+      "quotedMessage": "« {{message}} »",
+      "reschedule": "Proposer un autre créneau",
+      "waitingClient": "EN ATTENTE DU CLIENT",
+      "proposedSlot": "Créneau proposé : {{date}}",
+      "contactClient": "Contacter le client",
+      "clientFallback": "Client",
+      "rescheduleSubtitle": "{{name}} recevra la proposition et pourra l'accepter ou la refuser.",
+      "initialRequest": "DEMANDE INITIALE",
+      "newDate": "Nouvelle date",
+      "invalidFormat": "Date ou heure invalide -- utilisez JJ/MM/AAAA et HH:MM.",
+      "mustBeFuture": "La date proposée doit être valide et dans le futur.",
+      "proposalError": "Erreur lors de la proposition de créneau.",
+      "sendProposal": "Envoyer la proposition"
+    },
+    "publishForm": {
+      "title": "Nouvelle annonce",
+      "step": "Étape {{step}}/3",
+      "propertyType": "TYPE DE BIEN",
+      "project": "PROJET",
+      "sale": "Achat",
+      "rent": "Location",
+      "listingTitle": "Titre de l'annonce",
+      "listingTitlePlaceholder": "Ex. Villa moderne 4 chambres",
+      "price": "Prix",
+      "surface": "Surface",
+      "optional": "Optionnel",
+      "photos": "Photos",
+      "coverBadge": "COUV.",
+      "addPhoto": "Ajouter",
+      "descriptionPlaceholder": "Décrivez le bien : atouts, quartier, équipements…",
+      "summary": "RÉCAPITULATIF",
+      "summaryType": "Type",
+      "summaryTitle": "Titre",
+      "summaryLocation": "Localisation",
+      "summaryRooms": "Chambres / douches",
+      "continue": "Continuer",
+      "back": "Retour",
+      "successTitle": "Annonce publiée",
+      "successText": "{{reference}} -- visible dès maintenant dans les recherches.",
+      "photoPermission": "Autorisez l'accès à vos photos pour en ajouter.",
+      "requiredFields": "Titre, prix et ville sont obligatoires.",
+      "descriptionRequired": "Merci de décrire le bien.",
+      "photoRequired": "Ajoutez au moins une photo.",
+      "publishError": "Erreur lors de la publication."
+    }
+  },
+  "auth": {
+    "password": "Mot de passe",
+    "createAccount": "Créer un compte",
+    "login": {
+      "title": "Bon retour chez vous",
+      "subtitle": "Connectez-vous pour suivre vos annonces, vos visites et vos échanges.",
+      "forgotPassword": "Mot de passe oublié ?",
+      "submit": "Se connecter",
+      "newHere": "Nouveau sur LAMAISON ? ",
+      "incomplete": "Veuillez compléter la connexion.",
+      "genericError": "Identifiants incorrects. Vérifie ton e-mail et ton mot de passe."
+    },
+    "signup": {
+      "title": "Quelques infos et\nvous êtes chez vous",
+      "fullName": "Prénom et nom",
+      "fullNamePlaceholder": "Votre nom complet",
+      "submit": "Créer mon compte",
+      "genericError": "Erreur lors de la création du compte. Vérifie tes informations."
+    },
+    "verify": {
+      "headerTitle": "Vérification",
+      "title": "Vérifiez votre e-mail",
+      "subtitle": "Un code de confirmation à 6 chiffres a été envoyé à <bold>{{email}}</bold>.",
+      "emailFallback": "votre adresse e-mail",
+      "codeLabel": "Code de vérification",
+      "codeLength": "Le code doit contenir 6 chiffres.",
+      "codeInvalid": "Code incorrect ou expiré. Veuillez réessayer.",
+      "verifyError": "Erreur lors de la vérification du code.",
+      "submit": "Confirmer le code",
+      "resend": "Vous n'avez pas reçu le code ? Renvoyer",
+      "resent": "Un nouveau code de vérification a été envoyé par e-mail.",
+      "resendError": "Impossible de renvoyer le code. Veuillez réessayer."
+    },
+    "clerkErrors": {
+      "passwordIncorrect": "Mot de passe incorrect.",
+      "accountNotFound": "Aucun compte ne correspond à cette adresse e-mail.",
+      "emailInvalid": "L'adresse e-mail n'est pas valide.",
+      "emailTaken": "Un compte existe déjà avec cette adresse e-mail.",
+      "passwordPwned": "Ce mot de passe a fuité lors d’une faille de sécurité connue. Choisis-en un autre.",
+      "passwordTooShort": "Mot de passe trop court : 8 caractères minimum.",
+      "passwordTooWeak": "Ce mot de passe n'est pas assez robuste.",
+      "codeIncorrect": "Code incorrect.",
+      "fieldRequired": "Merci de remplir tous les champs."
+    },
+    "forgot": {
+      "headerTitle": "Mot de passe oublié",
+      "title": "Réinitialiser votre mot de passe",
+      "subtitle": "Saisissez l’adresse e-mail de votre compte : nous vous enverrons un code à 6 chiffres.",
+      "submit": "Envoyer le code",
+      "emailRequired": "Merci de saisir votre adresse e-mail.",
+      "genericError": "Impossible d'envoyer le code. Vérifie ton adresse e-mail."
+    },
+    "reset": {
+      "headerTitle": "Nouveau mot de passe",
+      "title": "Choisissez un nouveau mot de passe",
+      "subtitle": "Saisissez le code reçu à <bold>{{email}}</bold> et votre nouveau mot de passe.",
+      "newPassword": "Nouveau mot de passe",
+      "passwordHint": "8 caractères minimum.",
+      "otherDevicesNotice": "Par sécurité, vos autres appareils seront déconnectés.",
+      "submit": "Réinitialiser le mot de passe",
+      "genericError": "Code invalide ou expiré."
+    }
+  },
+  "notFound": {
+    "title": "Oups !",
+    "message": "Cet écran n'existe pas.",
+    "backHome": "Retour à l'accueil"
   }
 }

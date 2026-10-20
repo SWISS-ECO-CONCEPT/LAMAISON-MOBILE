@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@clerk/clerk-expo';
 import { useStableGetToken } from '../../src/lib/useStableGetToken';
 import { showError } from '../../src/lib/dialogs';
@@ -17,9 +18,9 @@ import {
 import { formatDateBadge, formatTimeOnly } from '../../src/utils/time';
 
 const FILTERS = [
-  { key: 'all', label: 'Tous' },
-  { key: 'pending', label: 'En attente' },
-  { key: 'accepted', label: 'Acceptés' },
+  { key: 'all', labelKey: 'appointments.filterAll' },
+  { key: 'pending', labelKey: 'appointments.filterPending' },
+  { key: 'accepted', labelKey: 'appointments.filterAccepted' },
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]['key'];
@@ -34,6 +35,7 @@ type FilterKey = (typeof FILTERS)[number]['key'];
 // messagerie -- /rdvs/:id/propose n'accepte qu'une date, pas de texte).
 export default function RendezVousScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { userId: clerkId } = useAuth();
   const getToken = useStableGetToken();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
@@ -48,15 +50,15 @@ export default function RendezVousScreen() {
     setError(null);
     try {
       const token = await getToken();
-      if (!token) throw new Error('Session expirée, reconnecte-toi.');
+      if (!token) throw new Error(t('common.sessionExpired'));
       const data = await getRdvsByProspect(clerkId, token);
       setRdvs(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des rendez-vous.');
+      setError(err instanceof Error ? err.message : t('appointments.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [clerkId, getToken]);
+  }, [clerkId, getToken, t]);
 
   useEffect(() => {
     loadRdvs();
@@ -75,8 +77,8 @@ export default function RendezVousScreen() {
       pathname: '/conversation/[id]',
       params: {
         id: String(owner.id),
-        name: owner.firstname ?? 'Propriétaire',
-        subtitle: owner.role === 'AGENT' ? 'Agent LAMAISON' : 'Particulier',
+        name: owner.firstname ?? t('common.owner'),
+        subtitle: owner.role === 'AGENT' ? t('common.roleAgent') : t('common.roleProspect'),
       },
     });
   };
@@ -85,13 +87,13 @@ export default function RendezVousScreen() {
     setActingOnId(rdv.id);
     try {
       const token = await getToken();
-      if (!token) throw new Error('Session expirée, reconnecte-toi.');
+      if (!token) throw new Error(t('common.sessionExpired'));
       await action(rdv.id, token);
       await loadRdvs();
     } catch (err) {
       // L'agent/le prospect doit savoir que son action n'a pas abouti -- un
       // simple log console laissait croire que le clic avait fonctionné.
-      showError('Action impossible', err instanceof Error ? err.message : 'Erreur lors de la mise à jour du rendez-vous.');
+      showError(t('appointments.actionFailed'), err instanceof Error ? err.message : t('appointments.actionError'));
     } finally {
       setActingOnId(null);
     }
@@ -100,7 +102,7 @@ export default function RendezVousScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mes rendez-vous</Text>
+        <Text style={styles.title}>{t('appointments.title')}</Text>
         <View style={styles.filterRow}>
           {FILTERS.map((filter) => {
             const active = activeFilter === filter.key;
@@ -110,7 +112,7 @@ export default function RendezVousScreen() {
                 style={[styles.filterChip, active && styles.filterChipActive]}
                 onPress={() => setActiveFilter(filter.key)}>
                 <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                  {filter.label}
+                  {t(filter.labelKey)}
                 </Text>
               </Pressable>
             );
@@ -129,13 +131,13 @@ export default function RendezVousScreen() {
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={loadRdvs}>
-            <Text style={styles.retryText}>Réessayer</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
           {visibleRdvs.length === 0 ? (
-            <Text style={styles.emptyText}>Aucun rendez-vous pour l'instant.</Text>
+            <Text style={styles.emptyText}>{t('appointments.empty')}</Text>
           ) : (
             visibleRdvs.map((rdv) => {
               const listing = rdv.annonce ? mapAnnonceToListing(rdv.annonce) : null;
@@ -148,7 +150,7 @@ export default function RendezVousScreen() {
                   <View key={rdv.id} style={styles.proposedCard}>
                     <View style={styles.proposedBanner}>
                       <MaterialIcons name="swap-horiz" size={18} color={colors.white} />
-                      <Text style={styles.proposedBannerText}>NOUVEAU CRÉNEAU PROPOSÉ PAR L'AGENT</Text>
+                      <Text style={styles.proposedBannerText}>{t('appointments.proposedBanner')}</Text>
                     </View>
                     <View style={styles.proposedBody}>
                       <View style={styles.proposedHeaderRow}>
@@ -160,7 +162,7 @@ export default function RendezVousScreen() {
                         <View style={styles.proposedInfo}>
                           <Text style={styles.cardTitle}>{listing?.title}</Text>
                           <Text style={styles.cardMeta}>
-                            Réf. {listing?.reference} · {listing?.location}
+                            {t('listing.reference', { reference: listing?.reference ?? '' })} · {listing?.location}
                           </Text>
                           <Text style={styles.cardPrice}>{listing?.price}</Text>
                         </View>
@@ -168,14 +170,14 @@ export default function RendezVousScreen() {
 
                       <View style={styles.slotRow}>
                         <View style={styles.slotBoxPrevious}>
-                          <Text style={styles.slotLabelPrevious}>VOUS AVIEZ DEMANDÉ</Text>
+                          <Text style={styles.slotLabelPrevious}>{t('appointments.youRequested')}</Text>
                           <Text style={styles.slotValuePrevious}>
                             {previous.day} {previous.date} {previous.month} · {formatTimeOnly(rdv.date)}
                           </Text>
                         </View>
                         <MaterialIcons name="arrow-forward" size={20} color={colors.primary} />
                         <View style={styles.slotBoxProposed}>
-                          <Text style={styles.slotLabelProposed}>L'AGENT PROPOSE</Text>
+                          <Text style={styles.slotLabelProposed}>{t('appointments.agentProposes')}</Text>
                           <Text style={styles.slotValueProposed}>
                             {proposed.day} {proposed.date} {proposed.month} · {formatTimeOnly(rdv.proposedDate)}
                           </Text>
@@ -183,7 +185,7 @@ export default function RendezVousScreen() {
                       </View>
 
                       <Pressable onPress={() => goToConversation(rdv)}>
-                        <Text style={styles.messagingLink}>Voir le message de l'agent dans la messagerie</Text>
+                        <Text style={styles.messagingLink}>{t('appointments.seeAgentMessage')}</Text>
                       </Pressable>
 
                       <View style={styles.actionsRow}>
@@ -191,13 +193,13 @@ export default function RendezVousScreen() {
                           style={styles.acceptButton}
                           disabled={acting}
                           onPress={() => runAction(rdv, acceptProposal)}>
-                          {acting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.acceptButtonText}>Accepter</Text>}
+                          {acting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.acceptButtonText}>{t('appointments.accept')}</Text>}
                         </Pressable>
                         <Pressable
                           style={styles.declineButton}
                           disabled={acting}
                           onPress={() => runAction(rdv, rejectProposal)}>
-                          <Text style={styles.declineButtonText}>Refuser</Text>
+                          <Text style={styles.declineButtonText}>{t('appointments.decline')}</Text>
                         </Pressable>
                       </View>
                     </View>
@@ -207,8 +209,11 @@ export default function RendezVousScreen() {
 
               const badge = formatDateBadge(rdv.date);
               const pending = rdv.status === 'EN_ATTENTE';
-              const statusLabel =
-                rdv.status === 'ACCEPTE' ? 'ACCEPTÉ' : rdv.status === 'REFUSE' ? 'REFUSÉ' : rdv.status === 'ANNULE' ? 'ANNULÉ' : 'EN ATTENTE';
+              // PROPOSE est traité plus haut (carte dédiée) ; tout autre statut
+              // non final s'affiche « en attente », comme avant.
+              const statusKey =
+                rdv.status === 'ACCEPTE' || rdv.status === 'REFUSE' || rdv.status === 'ANNULE' ? rdv.status : 'EN_ATTENTE';
+              const statusLabel = t(`appointments.status.${statusKey}`);
 
               return (
                 <View key={rdv.id} style={styles.card}>
@@ -231,16 +236,16 @@ export default function RendezVousScreen() {
                     </View>
                     <Text style={styles.cardTitle}>{listing?.title}</Text>
                     <Text style={styles.cardMeta}>
-                      Réf. {listing?.reference} · {listing?.location} · {listing?.price}
+                      {t('listing.reference', { reference: listing?.reference ?? '' })} · {listing?.location} · {listing?.price}
                     </Text>
 
                     {rdv.status === 'ACCEPTE' ? (
                       <Pressable style={styles.contactButton} onPress={() => goToConversation(rdv)}>
-                        <Text style={styles.contactButtonText}>Contacter l'agent</Text>
+                        <Text style={styles.contactButtonText}>{t('appointments.contactAgent')}</Text>
                       </Pressable>
                     ) : pending ? (
                       <Pressable disabled={acting} onPress={() => runAction(rdv, cancelRdv)}>
-                        <Text style={styles.cancelText}>{acting ? 'Annulation…' : 'Annuler ma demande'}</Text>
+                        <Text style={styles.cancelText}>{acting ? t('appointments.cancelling') : t('appointments.cancelRequest')}</Text>
                       </Pressable>
                     ) : null}
                   </View>

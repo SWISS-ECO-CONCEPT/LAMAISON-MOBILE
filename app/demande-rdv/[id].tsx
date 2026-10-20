@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
@@ -29,6 +30,7 @@ export default function DemandeRdvScreen() {
     listingReference?: string;
   }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const { getToken } = useAuth();
   const { user: clerkUser } = useUser();
   const { user: dbUser } = useAuthContext();
@@ -40,7 +42,13 @@ export default function DemandeRdvScreen() {
   const [date, setDate] = useState('');
   const [heure, setHeure] = useState('');
   const [message, setMessage] = useState(
-    listingTitle ? `Bonjour, je souhaite visiter "${listingTitle}"${listingReference ? ` (Réf. ${listingReference})` : ''}.` : ''
+    // Message prérempli dans la langue active à l'ouverture du formulaire
+    // (texte libre : l'utilisateur peut le modifier ensuite).
+    listingTitle
+      ? listingReference
+        ? t('visitRequest.defaultMessageWithRef', { title: listingTitle, reference: listingReference })
+        : t('visitRequest.defaultMessage', { title: listingTitle })
+      : ''
   );
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -71,12 +79,12 @@ export default function DemandeRdvScreen() {
     setErrorMessage('');
 
     if (!prenom.trim() || !nom.trim() || !email.trim() || !telephone.trim() || !message.trim()) {
-      setErrorMessage('Merci de remplir tous les champs.');
+      setErrorMessage(t('visitRequest.missingFields'));
       return;
     }
     const requestedDate = parseRequestedDate();
     if (!requestedDate) {
-      setErrorMessage('Date ou heure invalide -- utilisez JJ/MM/AAAA et HH:MM, dans le futur.');
+      setErrorMessage(t('visitRequest.invalidDate'));
       return;
     }
 
@@ -84,7 +92,7 @@ export default function DemandeRdvScreen() {
     try {
       const token = await getToken();
       if (!token) {
-        setErrorMessage('Session expirée, reconnectez-vous.');
+        setErrorMessage(t('common.sessionExpired'));
         return;
       }
       await createRdv(
@@ -101,7 +109,7 @@ export default function DemandeRdvScreen() {
       );
       setSuccess(true);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Erreur lors de la demande de rendez-vous.');
+      setErrorMessage(err instanceof Error ? err.message : t('visitRequest.submitError'));
     } finally {
       setLoading(false);
     }
@@ -112,12 +120,10 @@ export default function DemandeRdvScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.successState}>
           <MaterialIcons name="check-circle" size={56} color={colors.primary} />
-          <Text style={styles.successTitle}>Demande envoyée</Text>
-          <Text style={styles.successText}>
-            Le propriétaire a reçu votre demande de rendez-vous et vous répondra via la messagerie.
-          </Text>
+          <Text style={styles.successTitle}>{t('visitRequest.successTitle')}</Text>
+          <Text style={styles.successText}>{t('visitRequest.successText')}</Text>
           <Pressable style={styles.primaryButton} onPress={() => router.back()}>
-            <Text style={styles.primaryButtonText}>Retour à l'annonce</Text>
+            <Text style={styles.primaryButtonText}>{t('visitRequest.backToListing')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -131,35 +137,35 @@ export default function DemandeRdvScreen() {
           <Pressable onPress={() => router.back()}>
             <MaterialIcons name="close" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Demander un rendez-vous</Text>
+          <Text style={styles.headerTitle}>{t('visitRequest.title')}</Text>
         </View>
 
         {listingTitle ? <Text style={styles.listingTitle}>{listingTitle}</Text> : null}
 
         <View style={styles.row}>
           <View style={[styles.field, styles.fieldHalf]}>
-            <Text style={styles.label}>Prénom</Text>
+            <Text style={styles.label}>{t('visitRequest.firstName')}</Text>
             <View style={styles.inputWrapper}>
-              <TextInput style={styles.input} value={prenom} onChangeText={setPrenom} placeholder="Prénom" placeholderTextColor="#9ca3af" />
+              <TextInput style={styles.input} value={prenom} onChangeText={setPrenom} placeholder={t('visitRequest.firstName')} placeholderTextColor="#9ca3af" />
             </View>
           </View>
           <View style={[styles.field, styles.fieldHalf]}>
-            <Text style={styles.label}>Nom</Text>
+            <Text style={styles.label}>{t('visitRequest.lastName')}</Text>
             <View style={styles.inputWrapper}>
-              <TextInput style={styles.input} value={nom} onChangeText={setNom} placeholder="Nom" placeholderTextColor="#9ca3af" />
+              <TextInput style={styles.input} value={nom} onChangeText={setNom} placeholder={t('visitRequest.lastName')} placeholderTextColor="#9ca3af" />
             </View>
           </View>
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Adresse e-mail</Text>
+          <Text style={styles.label}>{t('visitRequest.email')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="mail-outline" size={20} color="#9ca3af" />
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="vous@exemple.com"
+              placeholder={t('visitRequest.emailPlaceholder')}
               placeholderTextColor="#9ca3af"
               autoCapitalize="none"
               keyboardType="email-address"
@@ -168,7 +174,7 @@ export default function DemandeRdvScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Téléphone</Text>
+          <Text style={styles.label}>{t('visitRequest.phone')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="call" size={20} color="#9ca3af" />
             <TextInput
@@ -184,27 +190,27 @@ export default function DemandeRdvScreen() {
 
         <View style={styles.row}>
           <View style={[styles.field, styles.fieldHalf]}>
-            <Text style={styles.label}>Date souhaitée</Text>
+            <Text style={styles.label}>{t('visitRequest.date')}</Text>
             <View style={styles.inputWrapper}>
-              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder="JJ/MM/AAAA" placeholderTextColor="#9ca3af" keyboardType="number-pad" />
+              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder={t('visitRequest.datePlaceholder')} placeholderTextColor="#9ca3af" keyboardType="number-pad" />
             </View>
           </View>
           <View style={[styles.field, styles.fieldHalf]}>
-            <Text style={styles.label}>Heure</Text>
+            <Text style={styles.label}>{t('visitRequest.time')}</Text>
             <View style={styles.inputWrapper}>
-              <TextInput style={styles.input} value={heure} onChangeText={setHeure} placeholder="HH:MM" placeholderTextColor="#9ca3af" keyboardType="number-pad" />
+              <TextInput style={styles.input} value={heure} onChangeText={setHeure} placeholder={t('visitRequest.timePlaceholder')} placeholderTextColor="#9ca3af" keyboardType="number-pad" />
             </View>
           </View>
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Message</Text>
+          <Text style={styles.label}>{t('visitRequest.message')}</Text>
           <View style={[styles.inputWrapper, styles.inputWrapperMultiline]}>
             <TextInput
               style={[styles.input, styles.inputMultiline]}
               value={message}
               onChangeText={setMessage}
-              placeholder="Votre message au propriétaire…"
+              placeholder={t('visitRequest.messagePlaceholder')}
               placeholderTextColor="#9ca3af"
               multiline
               numberOfLines={4}
@@ -218,7 +224,7 @@ export default function DemandeRdvScreen() {
           style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
           onPress={handleSubmit}
           disabled={loading}>
-          {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>Envoyer la demande</Text>}
+          {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>{t('visitRequest.submit')}</Text>}
         </Pressable>
       </ScrollView>
     </SafeAreaView>

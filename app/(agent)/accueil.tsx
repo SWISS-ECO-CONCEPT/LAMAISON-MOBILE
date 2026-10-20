@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, SafeAreaView, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@clerk/clerk-expo';
 import { useStableGetToken } from '../../src/lib/useStableGetToken';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -25,6 +26,7 @@ export default function AgentHomeScreen() {
   // getToken stable : celui de useAuth() change à chaque rendu et relançait
   // le chargement en boucle (écran agent qui clignote). Voir src/lib/useStableGetToken.ts.
   const getToken = useStableGetToken();
+  const { t } = useTranslation();
   const { user: dbUser } = useAuthContext();
   const [listings, setListings] = useState<ReturnType<typeof mapAnnonceToListing>[]>([]);
   const [totalViews, setTotalViews] = useState(0);
@@ -39,17 +41,23 @@ export default function AgentHomeScreen() {
     try {
       const [annonces, rdvs] = await Promise.all([
         getAnnoncesByUser(clerkId),
-        getToken().then((token) => (token ? getRdvsByAgent(clerkId, token) : [])),
+        // Avant : sans token, on renvoyait [] -> l'écran affichait « 0 demande »
+        // au lieu de signaler la session expirée (valeur par défaut qui masque
+        // une erreur). On lève une erreur, affichée par le catch ci-dessous.
+        getToken().then((token) => {
+          if (!token) throw new Error(t('common.sessionExpired'));
+          return getRdvsByAgent(clerkId, token);
+        }),
       ]);
       setListings(annonces.map(mapAnnonceToListing));
       setTotalViews(annonces.reduce((sum, a) => sum + (a.vues ?? 0), 0));
       setPendingCount(rdvs.filter((r) => r.status === 'EN_ATTENTE' || r.status === 'PROPOSE').length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement.');
+      setError(err instanceof Error ? err.message : t('agent.home.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [clerkId, getToken]);
+  }, [clerkId, getToken, t]);
 
   useEffect(() => {
     load();
@@ -60,7 +68,7 @@ export default function AgentHomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.agency}>Agent LAMAISON</Text>
+            <Text style={styles.agency}>{t('common.roleAgent')}</Text>
             <View style={styles.nameRow}>
               <Text style={styles.name}>{dbUser?.firstname ?? '—'}</Text>
             </View>
@@ -74,15 +82,15 @@ export default function AgentHomeScreen() {
         <View style={styles.statsRow}>
           <View style={[styles.statTile, styles.statTilePrimary]}>
             <Text style={[styles.statValue, styles.statValuePrimary]}>{listings.length}</Text>
-            <Text style={styles.statLabelPrimary}>annonces actives</Text>
+            <Text style={styles.statLabelPrimary}>{t('agent.home.activeListings', { count: listings.length })}</Text>
           </View>
           <View style={styles.statTile}>
             <Text style={styles.statValue}>{totalViews}</Text>
-            <Text style={styles.statLabel}>vues (total)</Text>
+            <Text style={styles.statLabel}>{t('agent.home.views', { count: totalViews })}</Text>
           </View>
           <View style={[styles.statTile, styles.statTileWarning]}>
             <Text style={[styles.statValue, styles.statValueWarning]}>{pendingCount}</Text>
-            <Text style={styles.statLabelWarning}>demandes</Text>
+            <Text style={styles.statLabelWarning}>{t('agent.home.requests', { count: pendingCount })}</Text>
           </View>
         </View>
       </View>
@@ -95,7 +103,7 @@ export default function AgentHomeScreen() {
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={load}>
-            <Text style={styles.retryText}>Réessayer</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -104,24 +112,22 @@ export default function AgentHomeScreen() {
             <Pressable style={styles.banner} onPress={() => router.push('/demandes')}>
               <MaterialIcons name="event-available" size={22} color={colors.white} />
               <View style={styles.bannerText}>
-                <Text style={styles.bannerTitle}>
-                  {pendingCount} demande{pendingCount > 1 ? 's' : ''} de visite en attente
-                </Text>
-                <Text style={styles.bannerSubtitle}>Accepter, refuser ou proposer un autre créneau</Text>
+                <Text style={styles.bannerTitle}>{t('agent.home.pendingBanner', { count: pendingCount })}</Text>
+                <Text style={styles.bannerSubtitle}>{t('agent.home.pendingBannerSubtitle')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={20} color={colors.white} />
             </Pressable>
           )}
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Mes annonces</Text>
+            <Text style={styles.sectionTitle}>{t('agent.myListings')}</Text>
             <Pressable onPress={() => router.push('/annonces')}>
-              <Text style={styles.sectionLink}>Voir tout</Text>
+              <Text style={styles.sectionLink}>{t('agent.home.seeAll')}</Text>
             </Pressable>
           </View>
 
           {listings.length === 0 ? (
-            <Text style={styles.emptyText}>Aucune annonce publiée pour l'instant.</Text>
+            <Text style={styles.emptyText}>{t('agent.noListings')}</Text>
           ) : (
             listings.slice(0, RECENT_COUNT).map((listing) => (
               <Pressable
@@ -136,9 +142,9 @@ export default function AgentHomeScreen() {
                 <View style={styles.listingInfo}>
                   <View style={styles.listingBadgeRow}>
                     <View style={styles.statusBadge}>
-                      <Text style={styles.statusBadgeText}>EN LIGNE</Text>
+                      <Text style={styles.statusBadgeText}>{t('agent.online')}</Text>
                     </View>
-                    <Text style={styles.listingMeta}>Réf. {listing.reference}</Text>
+                    <Text style={styles.listingMeta}>{t('listing.reference', { reference: listing.reference })}</Text>
                   </View>
                   <Text style={styles.listingTitle}>{listing.title}</Text>
                   <Text style={styles.listingPrice}>{listing.price}</Text>
@@ -151,7 +157,7 @@ export default function AgentHomeScreen() {
 
       <Pressable style={styles.fab} onPress={() => router.push('/publier-annonce')}>
         <MaterialIcons name="add" size={21} color={colors.white} />
-        <Text style={styles.fabText}>Publier</Text>
+        <Text style={styles.fabText}>{t('agent.publish')}</Text>
       </Pressable>
     </SafeAreaView>
   );

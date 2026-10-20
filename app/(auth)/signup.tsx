@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useSignUp } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
+import { clerkErrorMessage } from '../../src/lib/clerkErrors';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { signUp, isLoaded: isSignUpLoaded } = useSignUp();
 
   const [firstname, setFirstname] = useState('');
@@ -46,10 +49,8 @@ export default function SignupScreen() {
       // plutôt que de les re-lire depuis Clerk là-bas — plus simple, et ça
       // évite une dépendance à l'état interne du SDK entre deux écrans.
       router.push({ pathname: '/verify', params: { email, firstname, phone } });
-    } catch (err: any) {
-      setErrorMessage(
-        err?.errors?.[0]?.longMessage || 'Erreur lors de la création du compte. Vérifie tes informations.'
-      );
+    } catch (err) {
+      setErrorMessage(clerkErrorMessage(err, 'auth.signup.genericError'));
     } finally {
       setLoading(false);
     }
@@ -62,18 +63,18 @@ export default function SignupScreen() {
           <Pressable onPress={() => router.back()}>
             <MaterialIcons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Créer un compte</Text>
+          <Text style={styles.headerTitle}>{t('auth.createAccount')}</Text>
         </View>
 
-        <Text style={styles.title}>Quelques infos et{'\n'}vous êtes chez vous</Text>
+        <Text style={styles.title}>{t('auth.signup.title')}</Text>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Prénom et nom</Text>
+          <Text style={styles.label}>{t('auth.signup.fullName')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="person-outline" size={20} color="#9ca3af" />
             <TextInput
               style={styles.input}
-              placeholder="Votre nom complet"
+              placeholder={t('auth.signup.fullNamePlaceholder')}
               placeholderTextColor="#9ca3af"
               value={firstname}
               onChangeText={setFirstname}
@@ -82,12 +83,12 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Adresse e-mail</Text>
+          <Text style={styles.label}>{t('visitRequest.email')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="mail-outline" size={20} color="#9ca3af" />
             <TextInput
               style={styles.input}
-              placeholder="vous@exemple.com"
+              placeholder={t('visitRequest.emailPlaceholder')}
               placeholderTextColor="#9ca3af"
               value={email}
               onChangeText={setEmail}
@@ -98,7 +99,7 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Téléphone</Text>
+          <Text style={styles.label}>{t('visitRequest.phone')}</Text>
           <View style={styles.inputWrapper}>
             <Text style={styles.countryCode}>🇨🇲 +237</Text>
             <View style={styles.separator} />
@@ -114,7 +115,7 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Mot de passe</Text>
+          <Text style={styles.label}>{t('auth.password')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="lock-outline" size={20} color="#9ca3af" />
             <TextInput
@@ -136,7 +137,7 @@ export default function SignupScreen() {
           {loading ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <Text style={styles.primaryButtonText}>Créer mon compte</Text>
+            <Text style={styles.primaryButtonText}>{t('auth.signup.submit')}</Text>
           )}
         </Pressable>
       </ScrollView>

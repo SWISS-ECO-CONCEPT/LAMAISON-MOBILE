@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@clerk/clerk-expo';
 import { useStableGetToken } from '../../src/lib/useStableGetToken';
 
@@ -10,6 +11,9 @@ import { getRdvsByAgent } from '../../src/services/rdvService';
 
 export default function AgentTabLayout() {
   const colorScheme = useColorScheme();
+  // Abonne le layout à la langue : les titres d'onglets suivent un changement
+  // de langue sans redémarrer l'app.
+  const { t } = useTranslation();
   const { userId: clerkId } = useAuth();
   // getToken stable : celui de useAuth() change à chaque rendu et relançait
   // le chargement en boucle (écran agent qui clignote). Voir src/lib/useStableGetToken.ts.
@@ -47,7 +51,7 @@ export default function AgentTabLayout() {
       <Tabs.Screen
         name="accueil"
         options={{
-          title: 'Accueil',
+          title: t('tabs.home'),
           tabBarIcon: ({ color }) => (
             <SymbolView name={{ ios: 'house.fill', android: 'home', web: 'home' }} tintColor={color} size={28} />
           ),
@@ -56,7 +60,7 @@ export default function AgentTabLayout() {
       <Tabs.Screen
         name="annonces"
         options={{
-          title: 'Annonces',
+          title: t('tabs.listings'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'building.2', android: 'apartment', web: 'apartment' }}
@@ -69,7 +73,7 @@ export default function AgentTabLayout() {
       <Tabs.Screen
         name="demandes"
         options={{
-          title: 'Demandes',
+          title: t('tabs.requests'),
           tabBarBadge: pendingCount || undefined,
           tabBarIcon: ({ color }) => (
             <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={color} size={28} />
@@ -79,7 +83,7 @@ export default function AgentTabLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Messages',
+          title: t('tabs.messages'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'message.fill', android: 'chat_bubble', web: 'chat_bubble' }}
@@ -92,7 +96,7 @@ export default function AgentTabLayout() {
       <Tabs.Screen
         name="profil"
         options={{
-          title: 'Profil',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color }) => (
             <SymbolView name={{ ios: 'person.fill', android: 'person', web: 'person' }} tintColor={color} size={28} />
           ),

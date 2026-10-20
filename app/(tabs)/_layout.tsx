@@ -1,11 +1,15 @@
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  // useTranslation : le layout se re-rend au changement de langue, donc les
+  // titres d'onglets suivent sans redémarrer l'app.
+  const { t } = useTranslation();
 
   return (
     <Tabs
@@ -18,7 +22,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
+          title: t('tabs.home'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{
@@ -35,7 +39,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="recherche"
         options={{
-          title: 'Recherche',
+          title: t('tabs.search'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{
@@ -52,7 +56,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="rendezvous"
         options={{
-          title: 'RDV',
+          title: t('tabs.appointments'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{
@@ -69,7 +73,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Messages',
+          title: t('tabs.messages'),
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{
@@ -86,7 +90,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profil"
         options={{
-          title: 'Profil',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color }) => (
             <SymbolView name={{ ios: 'person.fill', android: 'person', web: 'person' }} tintColor={color} size={28} />
           ),

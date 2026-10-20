@@ -1,4 +1,4 @@
-import i18n from 'i18next';
+import i18n, { type ParseKeys } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { getLocales } from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +8,12 @@ import en from './locales/en.json';
 // Même bibliothèque que le site web (frontend/src/i18n.ts), mais les
 // traductions sont EMBARQUÉES dans l'app (pas de chargement HTTP comme sur le
 // web) : disponibles hors connexion et sans délai au démarrage.
+
+// Type de « n'importe quelle clé de traduction valide », calculé par i18next
+// à partir de fr.json (voir i18next.d.ts). Sert quand une clé est stockée
+// dans une variable ou une table (ex. src/lib/clerkErrors.ts) : une faute
+// de frappe y devient une erreur `tsc`, comme dans un appel t('...') direct.
+export type TranslationKey = ParseKeys;
 
 export const SUPPORTED_LANGUAGES = ['fr', 'en'] as const;
 export type AppLanguage = (typeof SUPPORTED_LANGUAGES)[number];

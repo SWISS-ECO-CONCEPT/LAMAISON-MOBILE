@@ -11,12 +11,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useStableGetToken } from '../../src/lib/useStableGetToken';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { getConversation, createMessage, type MessageApi } from '../../src/services/messageService';
 import { formatDayLabel, formatTimeOnly } from '../../src/utils/time';
+import { showError } from '../../src/lib/dialogs';
 
 // Avant : conversation entièrement mockée (src/data/conversations.ts),
 // aucun appel réseau, les messages envoyés ne survivaient même pas à la
@@ -29,6 +31,7 @@ import { formatDayLabel, formatTimeOnly } from '../../src/utils/time';
 export default function ConversationScreen() {
   const { id, name, subtitle } = useLocalSearchParams<{ id: string; name?: string; subtitle?: string }>();
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const getToken = useStableGetToken();
   const { user } = useAuthContext();
   const myDbId = user?.id ? Number(user.id) : undefined;
@@ -46,15 +49,15 @@ export default function ConversationScreen() {
     setError(null);
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) throw new Error(t('common.sessionExpired'));
       const data = await getConversation(myDbId, otherUserId, token);
       setMessages(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement de la conversation.');
+      setError(err instanceof Error ? err.message : t('conversation.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [myDbId, otherUserId, getToken]);
+  }, [myDbId, otherUserId, getToken, t]);
 
   useEffect(() => {
     loadMessages();
@@ -66,12 +69,14 @@ export default function ConversationScreen() {
     setSending(true);
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) throw new Error(t('common.sessionExpired'));
       const message = await createMessage(myDbId, otherUserId, content, token);
       setMessages((prev) => [...prev, message]);
       setDraft('');
     } catch (err) {
-      console.error('Erreur lors de l\'envoi du message', err);
+      // Avant : log console uniquement -- le message semblait envoyé alors
+      // qu'il ne l'était pas (le brouillon restait, sans explication).
+      showError(t('common.error'), err instanceof Error ? err.message : t('conversation.sendError'));
     } finally {
       setSending(false);
     }
@@ -92,7 +97,9 @@ export default function ConversationScreen() {
       }
     }
     return byDay;
-  }, [messages]);
+    // La langue fait partie des dépendances : les libellés de jour (« HIER »,
+    // date longue) sont calculés ici et doivent suivre un changement de langue.
+  }, [messages, i18n.resolvedLanguage]);
 
   return (
     <KeyboardAvoidingView
@@ -106,7 +113,7 @@ export default function ConversationScreen() {
           <View style={styles.headerAvatar} />
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>{name || 'Conversation'}</Text>
+          <Text style={styles.headerName}>{name || t('conversation.fallbackTitle')}</Text>
           {subtitle ? <Text style={styles.headerStatus}>{subtitle}</Text> : null}
         </View>
       </View>
@@ -119,13 +126,13 @@ export default function ConversationScreen() {
         <View style={styles.centerState}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={loadMessages}>
-            <Text style={styles.retryText}>Réessayer</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
       ) : (
         <ScrollView style={styles.thread} contentContainerStyle={styles.threadContent}>
           {messages.length === 0 ? (
-            <Text style={styles.emptyText}>Aucun message pour l'instant -- écrivez le premier.</Text>
+            <Text style={styles.emptyText}>{t('conversation.empty')}</Text>
           ) : (
             groups.map((group) => (
               <View key={group.label}>
@@ -154,7 +161,7 @@ export default function ConversationScreen() {
       <View style={styles.composer}>
         <TextInput
           style={styles.composerInput}
-          placeholder="Écrire un message…"
+          placeholder={t('conversation.placeholder')}
           placeholderTextColor={colors.textLight}
           value={draft}
           onChangeText={setDraft}

@@ -1,5 +1,6 @@
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, radius } from '../config/theme';
 
 type SearchBarProps = {
@@ -19,13 +20,14 @@ export default function SearchBar({
   onSubmit,
   filtersActive,
 }: SearchBarProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.row}>
       <View style={styles.inputWrap}>
         <MaterialIcons name="search" size={20} color={colors.textLight} />
         <TextInput
           style={styles.input}
-          placeholder={placeholder ?? 'Rechercher…'}
+          placeholder={placeholder ?? t('common.search')}
           placeholderTextColor={colors.textLight}
           value={value}
           onChangeText={onChangeText}

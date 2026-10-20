@@ -4,13 +4,24 @@
     "confirm": "Confirm",
     "error": "Error",
     "sessionNotFound": "Session not found, please sign in again.",
-    "sessionInvalid": "Invalid session, please sign in again."
+    "sessionInvalid": "Invalid session, please sign in again.",
+    "retry": "Retry",
+    "sessionExpired": "Session expired, please sign in again.",
+    "search": "Search…",
+    "min": "Min",
+    "max": "Max",
+    "unlimited": "No limit",
+    "roleAgent": "LAMAISON agent",
+    "roleProspect": "Individual",
+    "owner": "Owner"
   },
   "profile": {
     "favorites": "favorites",
     "appointments": "appointments",
     "agentBadge": "LAMAISON agent",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "security": "Security and privacy",
+    "help": "Help and contact"
   },
   "role": {
     "sectionTitle": "MY ROLE",
@@ -28,5 +39,290 @@
   },
   "preferences": {
     "language": "Language"
+  },
+  "tabs": {
+    "home": "Home",
+    "search": "Search",
+    "appointments": "Visits",
+    "messages": "Messages",
+    "profile": "Profile",
+    "listings": "Listings",
+    "requests": "Requests"
+  },
+  "time": {
+    "yesterday": "Yesterday",
+    "todayUpper": "TODAY",
+    "yesterdayUpper": "YESTERDAY",
+    "dateAtTime": "{{date}} at {{time}}"
+  },
+  "listing": {
+    "rent": "RENT",
+    "sale": "SALE",
+    "perMonth": "/month",
+    "reference": "Ref. {{reference}}",
+    "publishedToday": "posted today",
+    "publishedYesterday": "posted yesterday",
+    "publishedDaysAgo": "posted {{count}} days ago",
+    "bedsShort": "{{count}} bd.",
+    "showers_one": "{{count}} shower",
+    "showers_other": "{{count}} showers",
+    "area": "{{area}} m²",
+    "bedrooms": "bedrooms",
+    "showersLabel": "showers",
+    "areaUnit": "m²",
+    "description": "Description",
+    "requestVisit": "Request a visit",
+    "notFound": "Listing not found.",
+    "backHome": "Back to home"
+  },
+  "propertyTypes": {
+    "maison": "House",
+    "appartement": "Apartment",
+    "terrain": "Land",
+    "chambre": "Room",
+    "meublé": "Furnished",
+    "studio": "Studio",
+    "duplex": "Duplex"
+  },
+  "home": {
+    "greeting": "Hello",
+    "greetingName": "Hello {{name}}",
+    "searchPlaceholder": "District, city, property type…",
+    "rent": "Rent",
+    "sale": "Buy",
+    "house": "House",
+    "apartmentShort": "Apt.",
+    "listingsCount_one": "{{count}} listing near you",
+    "listingsCount_other": "{{count}} listings near you",
+    "map": "Map",
+    "empty": "No listing matches your search.",
+    "loadError": "Could not load listings."
+  },
+  "searchScreen": {
+    "title": "Search",
+    "placeholder": "District, city, reference…",
+    "recent": "Recent searches",
+    "categories": "Categories",
+    "popularCities": "Popular cities"
+  },
+  "filters": {
+    "title": "Advanced filters",
+    "reset": "Reset",
+    "price": "PRICE (FCFA)",
+    "area": "AREA (M²)",
+    "location": "LOCATION",
+    "city": "City",
+    "district": "District",
+    "cityPlaceholder": "e.g. Douala",
+    "districtPlaceholder": "e.g. Bonapriso",
+    "minimum": "MINIMUM REQUIRED",
+    "apply": "Apply filters"
+  },
+  "appointments": {
+    "title": "My visits",
+    "filterAll": "All",
+    "filterPending": "Pending",
+    "filterAccepted": "Accepted",
+    "empty": "No visits yet.",
+    "loadError": "Could not load your visits.",
+    "actionFailed": "Action failed",
+    "actionError": "Could not update the visit.",
+    "proposedBanner": "NEW TIME SLOT PROPOSED BY THE AGENT",
+    "youRequested": "YOU REQUESTED",
+    "agentProposes": "THE AGENT PROPOSES",
+    "seeAgentMessage": "See the agent's message in your inbox",
+    "accept": "Accept",
+    "decline": "Decline",
+    "contactAgent": "Contact the agent",
+    "cancelling": "Cancelling…",
+    "cancelRequest": "Cancel my request",
+    "status": {
+      "ACCEPTE": "ACCEPTED",
+      "REFUSE": "DECLINED",
+      "ANNULE": "CANCELLED",
+      "EN_ATTENTE": "PENDING"
+    }
+  },
+  "messages": {
+    "title": "Messages",
+    "empty": "No conversations yet.",
+    "loadError": "Could not load conversations."
+  },
+  "conversation": {
+    "fallbackTitle": "Conversation",
+    "empty": "No messages yet -- write the first one.",
+    "placeholder": "Write a message…",
+    "loadError": "Could not load the conversation.",
+    "sendError": "Your message could not be sent."
+  },
+  "favorites": {
+    "title": "My favorites",
+    "empty": "No favorite listings yet."
+  },
+  "visitRequest": {
+    "title": "Request a visit",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "phone": "Phone",
+    "date": "Preferred date",
+    "datePlaceholder": "DD/MM/YYYY",
+    "time": "Time",
+    "timePlaceholder": "HH:MM",
+    "message": "Message",
+    "messagePlaceholder": "Your message to the owner…",
+    "defaultMessage": "Hello, I would like to visit \"{{title}}\".",
+    "defaultMessageWithRef": "Hello, I would like to visit \"{{title}}\" (Ref. {{reference}}).",
+    "missingFields": "Please fill in all fields.",
+    "invalidDate": "Invalid date or time -- use DD/MM/YYYY and HH:MM, in the future.",
+    "submitError": "Could not send your visit request.",
+    "submit": "Send request",
+    "successTitle": "Request sent",
+    "successText": "The owner has received your visit request and will reply through your inbox.",
+    "backToListing": "Back to listing"
+  },
+  "agent": {
+    "online": "ONLINE",
+    "myListings": "My listings",
+    "noListings": "No listings published yet.",
+    "publish": "Publish",
+    "home": {
+      "loadError": "Could not load your data.",
+      "activeListings_one": "active listing",
+      "activeListings_other": "active listings",
+      "views_one": "view (total)",
+      "views_other": "views (total)",
+      "requests_one": "request",
+      "requests_other": "requests",
+      "pendingBanner_one": "{{count}} pending visit request",
+      "pendingBanner_other": "{{count}} pending visit requests",
+      "pendingBannerSubtitle": "Accept, decline or propose another time slot",
+      "seeAll": "See all"
+    },
+    "listings": {
+      "searchPlaceholder": "Title, reference…",
+      "loadError": "Could not load your listings."
+    },
+    "requests": {
+      "title": "Visit requests",
+      "filterHistory": "History",
+      "empty": "No requests here yet.",
+      "loadError": "Could not load visit requests.",
+      "receivedAt": "Received {{when}}",
+      "requestedSlot": "Requested slot: {{date}}",
+      "quotedMessage": "“{{message}}”",
+      "reschedule": "Propose another time slot",
+      "waitingClient": "WAITING FOR CLIENT",
+      "proposedSlot": "Proposed slot: {{date}}",
+      "contactClient": "Contact the client",
+      "clientFallback": "Client",
+      "rescheduleSubtitle": "{{name}} will receive the proposal and can accept or decline it.",
+      "initialRequest": "INITIAL REQUEST",
+      "newDate": "New date",
+      "invalidFormat": "Invalid date or time -- use DD/MM/YYYY and HH:MM.",
+      "mustBeFuture": "The proposed date must be valid and in the future.",
+      "proposalError": "Could not send the time slot proposal.",
+      "sendProposal": "Send proposal"
+    },
+    "publishForm": {
+      "title": "New listing",
+      "step": "Step {{step}}/3",
+      "propertyType": "PROPERTY TYPE",
+      "project": "TRANSACTION",
+      "sale": "Sale",
+      "rent": "Rent",
+      "listingTitle": "Listing title",
+      "listingTitlePlaceholder": "e.g. Modern 4-bedroom villa",
+      "price": "Price",
+      "surface": "Area",
+      "optional": "Optional",
+      "photos": "Photos",
+      "coverBadge": "COVER",
+      "addPhoto": "Add",
+      "descriptionPlaceholder": "Describe the property: highlights, neighborhood, amenities…",
+      "summary": "SUMMARY",
+      "summaryType": "Type",
+      "summaryTitle": "Title",
+      "summaryLocation": "Location",
+      "summaryRooms": "Bedrooms / showers",
+      "continue": "Continue",
+      "back": "Back",
+      "successTitle": "Listing published",
+      "successText": "{{reference}} -- now visible in search results.",
+      "photoPermission": "Allow access to your photos to add some.",
+      "requiredFields": "Title, price and city are required.",
+      "descriptionRequired": "Please describe the property.",
+      "photoRequired": "Add at least one photo.",
+      "publishError": "Could not publish the listing."
+    }
+  },
+  "auth": {
+    "password": "Password",
+    "createAccount": "Create an account",
+    "login": {
+      "title": "Welcome back home",
+      "subtitle": "Sign in to follow your listings, visits and conversations.",
+      "forgotPassword": "Forgot your password?",
+      "submit": "Sign in",
+      "newHere": "New to LAMAISON? ",
+      "incomplete": "Please complete the sign-in.",
+      "genericError": "Incorrect credentials. Check your email and password."
+    },
+    "signup": {
+      "title": "A few details and\nyou are home",
+      "fullName": "Full name",
+      "fullNamePlaceholder": "Your full name",
+      "submit": "Create my account",
+      "genericError": "Could not create your account. Please check your details."
+    },
+    "verify": {
+      "headerTitle": "Verification",
+      "title": "Check your email",
+      "subtitle": "A 6-digit confirmation code was sent to <bold>{{email}}</bold>.",
+      "emailFallback": "your email address",
+      "codeLabel": "Verification code",
+      "codeLength": "The code must contain 6 digits.",
+      "codeInvalid": "Incorrect or expired code. Please try again.",
+      "verifyError": "Could not verify the code.",
+      "submit": "Confirm code",
+      "resend": "Didn't receive the code? Resend",
+      "resent": "A new verification code has been sent by email.",
+      "resendError": "Could not resend the code. Please try again."
+    },
+    "clerkErrors": {
+      "passwordIncorrect": "Incorrect password.",
+      "accountNotFound": "No account matches this email address.",
+      "emailInvalid": "The email address is not valid.",
+      "emailTaken": "An account already exists with this email address.",
+      "passwordPwned": "This password appeared in a known data breach. Please choose another one.",
+      "passwordTooShort": "Password too short: 8 characters minimum.",
+      "passwordTooWeak": "This password is not strong enough.",
+      "codeIncorrect": "Incorrect code.",
+      "fieldRequired": "Please fill in all fields."
+    },
+    "forgot": {
+      "headerTitle": "Forgot password",
+      "title": "Reset your password",
+      "subtitle": "Enter your account email address: we will send you a 6-digit code.",
+      "submit": "Send code",
+      "emailRequired": "Please enter your email address.",
+      "genericError": "Could not send the code. Please check your email address."
+    },
+    "reset": {
+      "headerTitle": "New password",
+      "title": "Choose a new password",
+      "subtitle": "Enter the code sent to <bold>{{email}}</bold> and your new password.",
+      "newPassword": "New password",
+      "passwordHint": "8 characters minimum.",
+      "otherDevicesNotice": "For your security, your other devices will be signed out.",
+      "submit": "Reset password",
+      "genericError": "Invalid or expired code."
+    }
+  },
+  "notFound": {
+    "title": "Oops!",
+    "message": "This screen doesn't exist.",
+    "backHome": "Go to home screen"
   }
 }
