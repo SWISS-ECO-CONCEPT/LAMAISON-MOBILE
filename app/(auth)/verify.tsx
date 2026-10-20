@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Trans, useTranslation } from 'react-i18next';
 import { useSignUp, useAuth, useUser } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { signUpUser } from '../../src/services/authService';
+import { clerkErrorMessage } from '../../src/lib/clerkErrors';
 
 export default function VerifyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ email?: string; firstname?: string; phone?: string }>();
   const { signUp, isLoaded: isSignUpLoaded, setActive } = useSignUp();
   const { getToken, userId } = useAuth();
@@ -28,7 +31,7 @@ export default function VerifyScreen() {
   const handleVerify = async () => {
     if (!isSignUpLoaded || !signUp || !setActive) return;
     if (code.trim().length !== 6) {
-      setErrorMessage('Le code doit contenir 6 chiffres.');
+      setErrorMessage(t('auth.verify.codeLength'));
       return;
     }
 
@@ -75,12 +78,10 @@ export default function VerifyScreen() {
         // Étape 4 : Rediriger l'utilisateur vers l'accueil
         router.replace('/');
       } else {
-        setErrorMessage('Code incorrect ou expiré. Veuillez réessayer.');
+        setErrorMessage(t('auth.verify.codeInvalid'));
       }
-    } catch (err: any) {
-      setErrorMessage(
-        err?.errors?.[0]?.longMessage || 'Erreur lors de la vérification du code.'
-      );
+    } catch (err) {
+      setErrorMessage(clerkErrorMessage(err, 'auth.verify.verifyError'));
     } finally {
       setLoading(false);
     }
@@ -93,11 +94,9 @@ export default function VerifyScreen() {
     setResending(true);
     try {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      setInfoMessage('Un nouveau code de vérification a été envoyé par e-mail.');
-    } catch (err: any) {
-      setErrorMessage(
-        err?.errors?.[0]?.longMessage || 'Impossible de renvoyer le code. Veuillez réessayer.'
-      );
+      setInfoMessage(t('auth.verify.resent'));
+    } catch (err) {
+      setErrorMessage(clerkErrorMessage(err, 'auth.verify.resendError'));
     } finally {
       setResending(false);
     }
@@ -110,13 +109,20 @@ export default function VerifyScreen() {
           <Pressable onPress={() => router.back()}>
             <MaterialIcons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Vérification</Text>
+          <Text style={styles.headerTitle}>{t('auth.verify.headerTitle')}</Text>
         </View>
 
-        <Text style={styles.title}>Vérifiez votre e-mail</Text>
+        <Text style={styles.title}>{t('auth.verify.title')}</Text>
+        {/* <Trans> : la phrase contient un passage en gras (l'e-mail). On ne
+            la découpe pas en morceaux (« envoyé à » + e-mail + « . ») car
+            l'ordre des mots change selon la langue : la traduction contient
+            une balise <bold>, que Trans remplace par le composant donné. */}
         <Text style={styles.subtitle}>
-          Un code de confirmation à 6 chiffres a été envoyé à{' '}
-          <Text style={styles.emailHighlight}>{email || 'votre adresse e-mail'}</Text>.
+          <Trans
+            i18nKey="auth.verify.subtitle"
+            values={{ email: email || t('auth.verify.emailFallback') }}
+            components={{ bold: <Text style={styles.emailHighlight} /> }}
+          />
         </Text>
 
         {errorMessage ? (
@@ -134,7 +140,7 @@ export default function VerifyScreen() {
         ) : null}
 
         <View style={styles.field}>
-          <Text style={styles.label}>Code de vérification</Text>
+          <Text style={styles.label}>{t('auth.verify.codeLabel')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="verified-user" size={20} color="#9ca3af" />
             <TextInput
@@ -157,7 +163,7 @@ export default function VerifyScreen() {
           {loading ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <Text style={styles.submitButtonText}>Confirmer le code</Text>
+            <Text style={styles.submitButtonText}>{t('auth.verify.submit')}</Text>
           )}
         </Pressable>
 
@@ -169,7 +175,7 @@ export default function VerifyScreen() {
           {resending ? (
             <ActivityIndicator color={colors.primary} size="small" />
           ) : (
-            <Text style={styles.resendButtonText}>Vous n'avez pas reçu le code ? Renvoyer</Text>
+            <Text style={styles.resendButtonText}>{t('auth.verify.resend')}</Text>
           )}
         </Pressable>
       </View>

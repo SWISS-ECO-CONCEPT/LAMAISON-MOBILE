@@ -1,26 +1,25 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, SafeAreaView, ActivityIndicator, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-import { useSignIn, useAuth, useUser } from '@clerk/clerk-expo';
+import { useTranslation } from 'react-i18next';
+import { useSignIn } from '@clerk/clerk-expo';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/config/theme';
-import { useAuthContext } from '../../src/context/AuthContext';
-import { signInUser } from '../../src/services/authService';
+import { clerkErrorMessage } from '../../src/lib/clerkErrors';
+import { useCompleteSignIn } from '../../src/lib/useCompleteSignIn';
 
 export default function LoginScreen() {
   // `signIn` est l'objet Clerk qui pilote le processus de connexion.
   // `isSignInLoaded` est faux tant que le SDK Clerk n'a pas fini de
   // s'initialiser — tenter une connexion avant ça produirait une erreur
   // confuse, d'où la garde plus bas dans handleLogin.
-  const { signIn, isLoaded: isSignInLoaded, setActive } = useSignIn();
-  // `getToken` sert APRÈS la connexion, pour prouver au backend qu'on est
-  // bien authentifié. `userId` est l'identifiant Clerk une fois connecté.
-  const { getToken, userId } = useAuth();
-  const { user: clerkUser } = useUser();
-  // Le profil métier (rôle, id interne...) vit dans notre propre contexte,
-  // pas dans Clerk — voir authService.ts pour pourquoi.
-  const { updateUser } = useAuthContext();
+  const { signIn, isLoaded: isSignInLoaded } = useSignIn();
+  // Tout ce qui suit l'acceptation par Clerk (session, synchro du profil
+  // avec la base, redirection selon le rôle) est partagé avec la
+  // réinitialisation du mot de passe : voir src/lib/useCompleteSignIn.ts.
+  const completeSignIn = useCompleteSignIn();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +30,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     // Rien à faire si Clerk n'est pas prêt ou si les fonctions attendues
     // n'existent pas encore (même défense que côté web).
-    if (!isSignInLoaded || !signIn || !setActive) return;
+    if (!isSignInLoaded || !signIn) return;
     setErrorMessage('');
     setLoading(true);
     try {
@@ -40,56 +39,17 @@ export default function LoginScreen() {
       const result = await signIn.create({ identifier: email, password });
 
       if (result.status === 'complete') {
-        // Étape 2 : on active la session — à partir d'ici, l'utilisateur
-        // est authentifié aux yeux de Clerk.
-        await setActive({ session: result.createdSessionId });
-
-        try {
-          // Étape 3 : on récupère un token fraîchement émis pour PROUVER
-          // au backend qu'on est bien ce compte Clerk (Authorization Bearer).
-          const token = await getToken();
-          const clerkId = userId || clerkUser?.id;
-          if (clerkId && token) {
-            // Étape 4 : on va chercher le VRAI profil (id interne, rôle...)
-            // dans notre BDD — ce n'est pas Clerk qui décide du rôle.
-            const sync = await signInUser(clerkId, token);
-            const dbUser = sync?.user ?? sync;
-            updateUser({
-              id: dbUser?.id,
-              clerkId,
-              firstname: dbUser?.firstname,
-              email: dbUser?.email,
-              role: dbUser?.role,
-              phone: dbUser?.phone,
-            });
-            // Étape 5 : on redirige selon le rôle renvoyé par LA BASE,
-            // jamais selon une valeur qu'on aurait pu manipuler côté client.
-            router.replace(dbUser?.role === 'AGENT' ? '/accueil' : '/');
-          } else {
-            // Cas limite : la session Clerk est bien active mais on n'a pas
-            // pu récupérer de token/id — on laisse quand même entrer plutôt
-            // que de bloquer l'utilisateur, RootLayoutNav gérera la suite.
-            router.replace('/');
-          }
-        } catch (syncErr) {
-          // La connexion Clerk a réussi mais la synchro BDD a échoué
-          // (réseau, backend down...) — on ne bloque pas l'utilisateur pour
-          // autant : il est bien connecté, seul son profil détaillé manque
-          // temporairement. On log pour pouvoir diagnostiquer plus tard.
-          console.warn('Sync BDD echouee apres connexion', syncErr);
-          router.replace('/');
-        }
+        // Étapes 2 à 5 (session, synchro base, redirection) : fonction partagée.
+        await completeSignIn(result.createdSessionId);
       } else {
         // Cas rare : Clerk demande une étape supplémentaire (2FA, etc.)
         // qu'on ne gère pas encore dans cet écran.
-        setErrorMessage('Veuillez compléter la connexion.');
+        setErrorMessage(t('auth.login.incomplete'));
       }
-    } catch (err: any) {
-      // Message générique par défaut — on affiche le détail Clerk s'il y
-      // en a un (ex: "mot de passe incorrect"), sinon un message neutre.
-      setErrorMessage(
-        err?.errors?.[0]?.longMessage || 'Identifiants incorrects. Vérifie ton e-mail et ton mot de passe.'
-      );
+    } catch (err) {
+      // Clerk répond en anglais : clerkErrorMessage traduit l'erreur à partir
+      // de son code (voir src/lib/clerkErrors.ts), sinon message générique.
+      setErrorMessage(clerkErrorMessage(err, 'auth.login.genericError'));
     } finally {
       setLoading(false);
     }
@@ -106,18 +66,16 @@ export default function LoginScreen() {
           />
         </View>
 
-        <Text style={styles.title}>Bon retour chez vous</Text>
-        <Text style={styles.subtitle}>
-          Connectez-vous pour suivre vos annonces, vos visites et vos échanges.
-        </Text>
+        <Text style={styles.title}>{t('auth.login.title')}</Text>
+        <Text style={styles.subtitle}>{t('auth.login.subtitle')}</Text>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Adresse e-mail</Text>
+          <Text style={styles.label}>{t('visitRequest.email')}</Text>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="mail-outline" size={20} color="#9ca3af" />
             <TextInput
               style={styles.input}
-              placeholder="vous@exemple.com"
+              placeholder={t('visitRequest.emailPlaceholder')}
               placeholderTextColor="#9ca3af"
               value={email}
               onChangeText={setEmail}
@@ -128,7 +86,7 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Mot de passe</Text>
+          <Text style={styles.label}>{t('auth.password')}</Text>
           <View style={[styles.inputWrapper, styles.inputWrapperFocused]}>
             <MaterialIcons name="lock-outline" size={20} color="#9ca3af" />
             <TextInput
@@ -151,7 +109,13 @@ export default function LoginScreen() {
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
         <View style={styles.row}>
-          <Text style={styles.link}>Mot de passe oublié ?</Text>
+          {/* Avant : simple texte sans action. Ouvre maintenant le parcours de
+              réinitialisation (forgot-password -> reset-password). */}
+          <Link href="/forgot-password" asChild>
+            <Pressable>
+              <Text style={styles.link}>{t('auth.login.forgotPassword')}</Text>
+            </Pressable>
+          </Link>
         </View>
 
         <Pressable
@@ -161,7 +125,7 @@ export default function LoginScreen() {
           {loading ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <Text style={styles.primaryButtonText}>Se connecter</Text>
+            <Text style={styles.primaryButtonText}>{t('auth.login.submit')}</Text>
           )}
         </Pressable>
 
@@ -177,10 +141,10 @@ export default function LoginScreen() {
         </Pressable> */}
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Nouveau sur LAMAISON ? </Text>
+          <Text style={styles.footerText}>{t('auth.login.newHere')}</Text>
           <Link href="/signup" asChild>
             <Pressable>
-              <Text style={styles.footerLink}>Créer un compte</Text>
+              <Text style={styles.footerLink}>{t('auth.createAccount')}</Text>
             </Pressable>
           </Link>
         </View>

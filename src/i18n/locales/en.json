@@ -256,5 +256,73 @@
       "photoRequired": "Add at least one photo.",
       "publishError": "Could not publish the listing."
     }
+  },
+  "auth": {
+    "password": "Password",
+    "createAccount": "Create an account",
+    "login": {
+      "title": "Welcome back home",
+      "subtitle": "Sign in to follow your listings, visits and conversations.",
+      "forgotPassword": "Forgot your password?",
+      "submit": "Sign in",
+      "newHere": "New to LAMAISON? ",
+      "incomplete": "Please complete the sign-in.",
+      "genericError": "Incorrect credentials. Check your email and password."
+    },
+    "signup": {
+      "title": "A few details and\nyou are home",
+      "fullName": "Full name",
+      "fullNamePlaceholder": "Your full name",
+      "submit": "Create my account",
+      "genericError": "Could not create your account. Please check your details."
+    },
+    "verify": {
+      "headerTitle": "Verification",
+      "title": "Check your email",
+      "subtitle": "A 6-digit confirmation code was sent to <bold>{{email}}</bold>.",
+      "emailFallback": "your email address",
+      "codeLabel": "Verification code",
+      "codeLength": "The code must contain 6 digits.",
+      "codeInvalid": "Incorrect or expired code. Please try again.",
+      "verifyError": "Could not verify the code.",
+      "submit": "Confirm code",
+      "resend": "Didn't receive the code? Resend",
+      "resent": "A new verification code has been sent by email.",
+      "resendError": "Could not resend the code. Please try again."
+    },
+    "clerkErrors": {
+      "passwordIncorrect": "Incorrect password.",
+      "accountNotFound": "No account matches this email address.",
+      "emailInvalid": "The email address is not valid.",
+      "emailTaken": "An account already exists with this email address.",
+      "passwordPwned": "This password appeared in a known data breach. Please choose another one.",
+      "passwordTooShort": "Password too short: 8 characters minimum.",
+      "passwordTooWeak": "This password is not strong enough.",
+      "codeIncorrect": "Incorrect code.",
+      "fieldRequired": "Please fill in all fields."
+    },
+    "forgot": {
+      "headerTitle": "Forgot password",
+      "title": "Reset your password",
+      "subtitle": "Enter your account email address: we will send you a 6-digit code.",
+      "submit": "Send code",
+      "emailRequired": "Please enter your email address.",
+      "genericError": "Could not send the code. Please check your email address."
+    },
+    "reset": {
+      "headerTitle": "New password",
+      "title": "Choose a new password",
+      "subtitle": "Enter the code sent to <bold>{{email}}</bold> and your new password.",
+      "newPassword": "New password",
+      "passwordHint": "8 characters minimum.",
+      "otherDevicesNotice": "For your security, your other devices will be signed out.",
+      "submit": "Reset password",
+      "genericError": "Invalid or expired code."
+    }
+  },
+  "notFound": {
+    "title": "Oops!",
+    "message": "This screen doesn't exist.",
+    "backHome": "Go to home screen"
   }
 }

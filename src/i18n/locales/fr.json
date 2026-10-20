@@ -256,5 +256,73 @@
       "photoRequired": "Ajoutez au moins une photo.",
       "publishError": "Erreur lors de la publication."
     }
+  },
+  "auth": {
+    "password": "Mot de passe",
+    "createAccount": "Créer un compte",
+    "login": {
+      "title": "Bon retour chez vous",
+      "subtitle": "Connectez-vous pour suivre vos annonces, vos visites et vos échanges.",
+      "forgotPassword": "Mot de passe oublié ?",
+      "submit": "Se connecter",
+      "newHere": "Nouveau sur LAMAISON ? ",
+      "incomplete": "Veuillez compléter la connexion.",
+      "genericError": "Identifiants incorrects. Vérifie ton e-mail et ton mot de passe."
+    },
+    "signup": {
+      "title": "Quelques infos et\nvous êtes chez vous",
+      "fullName": "Prénom et nom",
+      "fullNamePlaceholder": "Votre nom complet",
+      "submit": "Créer mon compte",
+      "genericError": "Erreur lors de la création du compte. Vérifie tes informations."
+    },
+    "verify": {
+      "headerTitle": "Vérification",
+      "title": "Vérifiez votre e-mail",
+      "subtitle": "Un code de confirmation à 6 chiffres a été envoyé à <bold>{{email}}</bold>.",
+      "emailFallback": "votre adresse e-mail",
+      "codeLabel": "Code de vérification",
+      "codeLength": "Le code doit contenir 6 chiffres.",
+      "codeInvalid": "Code incorrect ou expiré. Veuillez réessayer.",
+      "verifyError": "Erreur lors de la vérification du code.",
+      "submit": "Confirmer le code",
+      "resend": "Vous n'avez pas reçu le code ? Renvoyer",
+      "resent": "Un nouveau code de vérification a été envoyé par e-mail.",
+      "resendError": "Impossible de renvoyer le code. Veuillez réessayer."
+    },
+    "clerkErrors": {
+      "passwordIncorrect": "Mot de passe incorrect.",
+      "accountNotFound": "Aucun compte ne correspond à cette adresse e-mail.",
+      "emailInvalid": "L'adresse e-mail n'est pas valide.",
+      "emailTaken": "Un compte existe déjà avec cette adresse e-mail.",
+      "passwordPwned": "Ce mot de passe a fuité lors d’une faille de sécurité connue. Choisis-en un autre.",
+      "passwordTooShort": "Mot de passe trop court : 8 caractères minimum.",
+      "passwordTooWeak": "Ce mot de passe n'est pas assez robuste.",
+      "codeIncorrect": "Code incorrect.",
+      "fieldRequired": "Merci de remplir tous les champs."
+    },
+    "forgot": {
+      "headerTitle": "Mot de passe oublié",
+      "title": "Réinitialiser votre mot de passe",
+      "subtitle": "Saisissez l’adresse e-mail de votre compte : nous vous enverrons un code à 6 chiffres.",
+      "submit": "Envoyer le code",
+      "emailRequired": "Merci de saisir votre adresse e-mail.",
+      "genericError": "Impossible d'envoyer le code. Vérifie ton adresse e-mail."
+    },
+    "reset": {
+      "headerTitle": "Nouveau mot de passe",
+      "title": "Choisissez un nouveau mot de passe",
+      "subtitle": "Saisissez le code reçu à <bold>{{email}}</bold> et votre nouveau mot de passe.",
+      "newPassword": "Nouveau mot de passe",
+      "passwordHint": "8 caractères minimum.",
+      "otherDevicesNotice": "Par sécurité, vos autres appareils seront déconnectés.",
+      "submit": "Réinitialiser le mot de passe",
+      "genericError": "Code invalide ou expiré."
+    }
+  },
+  "notFound": {
+    "title": "Oups !",
+    "message": "Cet écran n'existe pas.",
+    "backHome": "Retour à l'accueil"
   }
 }
